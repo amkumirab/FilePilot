@@ -160,6 +160,9 @@ python -m pip install -e . -r requirements-dev.txt
 python -m ruff check .
 python -m ruff format --check .
 python -m unittest discover -s tests -v
+python -m coverage run -m unittest discover -s tests -v
+python -m coverage combine
+python -m coverage report
 python -m build
 ```
 
@@ -167,6 +170,8 @@ Tests use real isolated files and subprocesses, including interrupted operations
 collisions, Unicode names, tampered journals, directory links, and process locks.
 The included CI workflow targets Windows and Ubuntu with Python 3.12 and 3.13.
 Remote CI results are available only after pushing the repository.
+See [the QA report](docs/qa-report.md) for measured coverage, tested failure
+scenarios, and the limits of verification.
 
 ## Roadmap
 

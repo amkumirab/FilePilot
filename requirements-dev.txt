@@ -1,3 +1,4 @@
 # Runtime dependencies: none. These are development/build tools only.
 ruff==0.17.4
 build==1.6.1
+coverage==7.17.2

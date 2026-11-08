@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Normalize lock roots so relative paths and Windows short-path aliases work.
+- Retry transient Windows journal access/sharing conflicts without replacing
+  the previous journal on persistent failure.
+- Explain unsupported file modification timestamps without a traceback.
+
+### Changed
+- Expand verification to 76 tests, including real process termination, native
+  open-file behavior, dense collisions, binary round trips, and corrupted input.
+- Measure line and branch coverage across CLI subprocesses in CI.
+
 ## 0.1.0 - 2026-11-08
 
 ### Added

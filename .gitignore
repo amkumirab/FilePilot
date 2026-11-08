@@ -5,7 +5,7 @@ __pycache__/
 build/
 dist/
 .ruff_cache/
-.coverage
+.coverage*
 htmlcov/
 .filepilot/
 .demo/

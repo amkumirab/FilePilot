@@ -33,3 +33,12 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.coverage.run]
+branch = true
+source = ["filepilot"]
+relative_files = true
+patch = ["subprocess", "_exit"]
+
+[tool.coverage.report]
+show_missing = true

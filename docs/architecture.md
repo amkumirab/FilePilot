@@ -12,6 +12,11 @@ and persists each operation before moving. `journal.py` writes a temporary JSON
 file, flushes and fsyncs it, then replaces the journal atomically. A journal error
 stops execution. An OS lock prevents simultaneous cooperating writers; a process
 crash releases it automatically, so there is no stale lock-file deletion step.
+Lock roots are resolved before containment checks, including relative paths and
+Windows short-name aliases. Journal replacement retries Windows error codes
+5, 32, and 33 up to six times with bounded exponential delays (0.62 seconds of
+total waiting). Other errors stop immediately; a persistent sharing conflict
+also stops without discarding the previous journal.
 
 Windows uses `os.rename`, which fails if the destination exists. POSIX uses
 exclusive `os.link` followed by source unlink; an ordinary unlink failure attempts
