@@ -17,8 +17,9 @@ def validate_template(template: str, *, filename: bool = False) -> None:
         for _, field, spec, conversion in string.Formatter().parse(template):
             if field is not None and (field not in FIELDS or spec or conversion):
                 raise FilePilotError(f"Unsupported template field: {field!r}")
-        sample = template.format(name="sample.pdf", stem="sample", ext=".pdf",
-                                 year="2026", month="01", day="02")
+        sample = template.format(
+            name="sample.pdf", stem="sample", ext=".pdf", year="2026", month="01", day="02"
+        )
     except (ValueError, KeyError) as exc:
         raise FilePilotError(f"Invalid template: {template!r}") from exc
     validate_relative(sample)
@@ -40,13 +41,13 @@ class Rule:
         if not isinstance(self.contains, str):
             raise FilePilotError("contains must be a string.")
         if not isinstance(self.extensions, (tuple, list)) or any(
-            not isinstance(ext, str) or not ext.lstrip(".")
-            or not ext.lstrip(".").isalnum() for ext in self.extensions
+            not isinstance(ext, str) or not ext.lstrip(".") or not ext.lstrip(".").isalnum()
+            for ext in self.extensions
         ):
             raise FilePilotError("extensions must contain simple suffixes such as 'pdf'.")
-        object.__setattr__(self, "extensions", tuple(
-            ext.lstrip(".").casefold() for ext in self.extensions
-        ))
+        object.__setattr__(
+            self, "extensions", tuple(ext.lstrip(".").casefold() for ext in self.extensions)
+        )
         validate_template(self.target)
         if self.rename is not None:
             validate_template(self.rename, filename=True)
@@ -57,16 +58,19 @@ class Rule:
         )
 
 
-DEFAULT_RULES = tuple(Rule(name, tuple(extensions.split()), name) for name, extensions in (
-    ("Documents", "pdf doc docx txt odt rtf"),
-    ("Spreadsheets", "xls xlsx csv tsv ods"),
-    ("Pictures", "jpg jpeg png gif webp svg heic bmp"),
-    ("Videos", "mp4 mkv mov avi webm"),
-    ("Audio", "mp3 wav flac m4a ogg"),
-    ("Archives", "zip 7z rar tar gz bz2 xz"),
-))
+DEFAULT_RULES = tuple(
+    Rule(name, tuple(extensions.split()), name)
+    for name, extensions in (
+        ("Documents", "pdf doc docx txt odt rtf"),
+        ("Spreadsheets", "xls xlsx csv tsv ods"),
+        ("Pictures", "jpg jpeg png gif webp svg heic bmp"),
+        ("Videos", "mp4 mkv mov avi webm"),
+        ("Audio", "mp3 wav flac m4a ogg"),
+        ("Archives", "zip 7z rar tar gz bz2 xz"),
+    )
+)
 
-EXAMPLE_CONFIG = '''# First matching rule wins. Dates use the file's modification time.
+EXAMPLE_CONFIG = """# First matching rule wins. Dates use the file's modification time.
 # {ext} includes the dot; {name} includes the original extension.
 
 [[rules]]
@@ -88,7 +92,7 @@ target = "Pictures/{year}/{month}"
 
 # Unmatched files stay in place. To match everything else, add a final rule
 # with target = "Other" and no extensions list.
-'''
+"""
 
 
 def load_rules(path: Path) -> tuple[Rule, ...]:

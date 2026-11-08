@@ -30,19 +30,26 @@ class PlannerTests(unittest.TestCase):
         (self.root / "Docs" / "same.pdf").write_bytes(b"existing")
         rules = (Rule("docs", ("pdf",), "Docs", rename="same{ext}"),)
         plan = build_plan(self.root, rules)
-        self.assertEqual([m.target for m in plan.moves],
-                         ["Docs/same (2).pdf", "Docs/same (3).pdf"])
+        self.assertEqual([m.target for m in plan.moves], ["Docs/same (2).pdf", "Docs/same (3).pdf"])
 
     def test_first_match_uses_modification_date_and_optional_rename(self):
         source = self.root / "invoice.pdf"
         source.write_bytes(b"invoice")
         # Midday UTC avoids local date changes in the example's month/year.
         os.utime(source, (1715774400, 1715774400))
-        rules = (Rule("invoices", (".PDF",), "Bills/{year}/{month}",
-                      contains="invoice", rename="{year}-{month}-{stem}{ext}"),
-                 Rule("all", (), "Other"))
-        self.assertEqual(build_plan(self.root, rules).moves[0].target,
-                         "Bills/2024/05/2024-05-invoice.pdf")
+        rules = (
+            Rule(
+                "invoices",
+                (".PDF",),
+                "Bills/{year}/{month}",
+                contains="invoice",
+                rename="{year}-{month}-{stem}{ext}",
+            ),
+            Rule("all", (), "Other"),
+        )
+        self.assertEqual(
+            build_plan(self.root, rules).moves[0].target, "Bills/2024/05/2024-05-invoice.pdf"
+        )
 
     def test_ignores_hidden_incomplete_and_nested_files(self):
         for name in (".private.pdf", "download.pdf.crdownload", "download.pdf.part"):
@@ -59,16 +66,20 @@ class PlannerTests(unittest.TestCase):
 
     def test_config_rejects_unknown_keys_and_invalid_templates(self):
         config = self.root / "rules.toml"
-        for contents in ('[[rules]]\nname="x"\ntarget="Docs"\nextensons=["pdf"]',
-                         '[[rules]]\nname="x"\ntarget="{missing}"'):
+        for contents in (
+            '[[rules]]\nname="x"\ntarget="Docs"\nextensons=["pdf"]',
+            '[[rules]]\nname="x"\ntarget="{missing}"',
+        ):
             config.write_text(contents, encoding="utf-8")
             with self.subTest(contents=contents), self.assertRaises(FilePilotError):
                 load_rules(config)
 
     def test_loads_ordered_toml_rules(self):
         config = self.root / "rules.toml"
-        config.write_text('[[rules]]\nname="PDF"\nextensions=["pdf"]\n'
-                          'target="Docs"\ncontains="bill"\n', encoding="utf-8")
+        config.write_text(
+            '[[rules]]\nname="PDF"\nextensions=["pdf"]\ntarget="Docs"\ncontains="bill"\n',
+            encoding="utf-8",
+        )
         self.assertEqual(load_rules(config)[0].contains, "bill")
 
 

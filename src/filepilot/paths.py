@@ -26,9 +26,12 @@ def validate_relative(value: str, *, internal: bool = False) -> None:
         f"{prefix}{number}" for prefix in ("COM", "LPT") for number in range(1, 10)
     }
     for part in parts:
-        if (part in ("", ".", "..") or part.endswith((" ", "."))
-                or any(ord(char) < 32 or char in '<>:"|?*' for char in part)
-                or part.split(".")[0].upper() in reserved):
+        if (
+            part in ("", ".", "..")
+            or part.endswith((" ", "."))
+            or any(ord(char) < 32 or char in '<>:"|?*' for char in part)
+            or part.split(".")[0].upper() in reserved
+        ):
             raise FilePilotError(f"Unsafe or non-portable path: {value!r}")
         if part.casefold() == ".filepilot" and not internal:
             raise FilePilotError("The .filepilot directory is reserved for history.")
