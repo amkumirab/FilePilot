@@ -17,6 +17,7 @@ RUN_STATES = {"running", "completed", "partial", "undoing", "undo_partial", "und
 @contextmanager
 def locked(root: Path):
     """The OS releases the lock even after process termination."""
+    root = root_directory(root)
     state = safe_path(root, ".filepilot", internal=True)
     state.mkdir(exist_ok=True)
     lock_path = safe_path(root, ".filepilot/lock", internal=True)

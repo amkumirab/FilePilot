@@ -4,6 +4,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import chdir
 from pathlib import Path
 from unittest.mock import patch
 
@@ -35,6 +36,10 @@ class SafetyTests(unittest.TestCase):
             )
             self.assertEqual(result.returncode, 7, result.stderr)
         self.assertEqual(execute(build_plan(self.root))["status"], "completed")
+
+    def test_lock_accepts_relative_root_paths(self):
+        with chdir(self.root.parent), locked(Path(self.root.name)):
+            self.assertTrue((self.root / ".filepilot/lock").exists())
 
     def test_journal_failure_prevents_move(self):
         with (
