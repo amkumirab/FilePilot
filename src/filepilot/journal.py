@@ -3,6 +3,7 @@
 import json
 import os
 import re
+import time
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
@@ -60,7 +61,17 @@ def save_run(root: Path, run: dict) -> None:
             stream.write("\n")
             stream.flush()
             os.fsync(stream.fileno())
-        os.replace(temporary, path)
+        # Windows scanners/readers can briefly hold a non-delete-sharing handle.
+        # Retry only those errors, with a bounded delay; persistent failures still
+        # stop the engine while the previous journal stays available for recovery.
+        for attempt in range(6):
+            try:
+                os.replace(temporary, path)
+                break
+            except PermissionError as exc:
+                if getattr(exc, "winerror", None) not in {5, 32, 33} or attempt == 5:
+                    raise
+                time.sleep(0.02 * 2**attempt)
     finally:
         temporary.unlink(missing_ok=True)
 
