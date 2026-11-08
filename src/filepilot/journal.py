@@ -70,6 +70,7 @@ def _validate(root: Path, run: dict, run_id: str) -> None:
         or run.get("version") != 1
         or run.get("id") != run_id
         or run.get("root") != str(root)
+        or not isinstance(run.get("status"), str)
         or run.get("status") not in RUN_STATES
         or not isinstance(run.get("entries"), list)
         or not isinstance(run.get("created"), str)
@@ -77,7 +78,11 @@ def _validate(root: Path, run: dict, run_id: str) -> None:
         raise FilePilotError(f"Invalid or relocated history journal: {run_id}")
     sources, targets = set(), set()
     for entry in run["entries"]:
-        if not isinstance(entry, dict) or entry.get("status") not in ENTRY_STATES:
+        if (
+            not isinstance(entry, dict)
+            or not isinstance(entry.get("status"), str)
+            or entry.get("status") not in ENTRY_STATES
+        ):
             raise FilePilotError(f"Invalid history entry in {run_id}")
         source, target, digest = entry.get("source"), entry.get("target"), entry.get("sha256")
         if not isinstance(source, str) or not isinstance(target, str):

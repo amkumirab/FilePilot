@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .config import DEFAULT_RULES, Rule
-from .paths import FilePilotError, is_link, root_directory, safe_path
+from .paths import FilePilotError, is_hidden, is_link, root_directory, safe_path
 
 INCOMPLETE = {".part", ".partial", ".crdownload", ".download", ".tmp", ".temp"}
 
@@ -69,7 +69,7 @@ def build_plan(
         reason = ""
         if is_link(source):
             reason = "link or junction"
-        elif source.name.startswith("."):
+        elif is_hidden(source):
             reason = "hidden or internal"
         elif not source.is_file():
             reason = "directory or non-regular file"
@@ -109,4 +109,8 @@ def build_plan(
         target = _unique_target(root, relative, reserved)
         reserved.add(target.casefold())
         moves.append(Move(source.name, target, rule.name, info.st_size, info.st_mtime_ns))
+    for move in moves:
+        parts = move.target.split("/")
+        if any("/".join(parts[:index]).casefold() in reserved for index in range(1, len(parts))):
+            raise FilePilotError(f"A planned file is also a target directory: {move.target}")
     return Plan(root, tuple(moves), tuple(skipped))

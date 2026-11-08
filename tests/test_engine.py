@@ -85,9 +85,11 @@ class EngineTests(unittest.TestCase):
             _move_no_replace(source, target)
             raise KeyboardInterrupt
 
-        with patch("filepilot.engine._move_no_replace", side_effect=interrupted):
-            with self.assertRaises(KeyboardInterrupt):
-                self.organize()
+        with (
+            patch("filepilot.engine._move_no_replace", side_effect=interrupted),
+            self.assertRaises(KeyboardInterrupt),
+        ):
+            self.organize()
         run = history(self.root)[0]
         self.assertEqual(run["entries"][0]["status"], "pending")
         self.assertEqual(undo(self.root, run["id"])["status"], "undone")
@@ -101,9 +103,11 @@ class EngineTests(unittest.TestCase):
             _move_no_replace(source, target)
             raise KeyboardInterrupt
 
-        with patch("filepilot.engine._move_no_replace", side_effect=interrupted):
-            with self.assertRaises(KeyboardInterrupt):
-                undo(self.root, run["id"])
+        with (
+            patch("filepilot.engine._move_no_replace", side_effect=interrupted),
+            self.assertRaises(KeyboardInterrupt),
+        ):
+            undo(self.root, run["id"])
         self.assertEqual(load_run(self.root, run["id"])["entries"][0]["status"], "undo_pending")
         self.assertEqual(undo(self.root, run["id"])["status"], "undone")
 

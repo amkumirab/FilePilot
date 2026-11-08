@@ -17,7 +17,7 @@ GUI, scheduling, watching, recursive scanning, and remote publication are later 
 - Every attempted move is journaled before execution. Successful moves are
   recoverable through undo, including a process interruption after a move.
 - Undo refuses to overwrite an occupied original path or move changed content.
-- Both configuration and journal paths must stay within the selected root.
+- Destination and journal paths must stay within the selected root.
 - Cooperating FilePilot processes serialize writes with an OS-released lock.
 - Errors have readable messages and nonzero exit codes.
 

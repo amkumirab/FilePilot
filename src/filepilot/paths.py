@@ -1,5 +1,6 @@
 """Constrain all file operations to the selected directory."""
 
+import stat
 from pathlib import Path
 
 
@@ -16,6 +17,13 @@ def root_directory(path: Path) -> Path:
 
 def is_link(path: Path) -> bool:
     return path.is_symlink() or path.is_junction()
+
+
+def is_hidden(path: Path) -> bool:
+    return path.name.startswith(".") or bool(
+        getattr(path.stat(follow_symlinks=False), "st_file_attributes", 0)
+        & stat.FILE_ATTRIBUTE_HIDDEN
+    )
 
 
 def validate_relative(value: str, *, internal: bool = False) -> None:

@@ -10,7 +10,7 @@ from .journal import history, load_run, locked, save_run
 from .paths import FilePilotError, root_directory, safe_path
 from .planner import Move, Plan
 
-__all__ = ["execute", "history", "load_run", "undo"]
+__all__ = ["execute", "history", "load_run", "preview_undo", "undo"]
 
 
 def _digest(path: Path) -> str:
@@ -111,6 +111,23 @@ def _restorable(root: Path, entry: dict) -> tuple[Path, Path] | None:
     if _digest(target) != entry["sha256"]:
         raise FilePilotError(f"Organized file changed; leaving it in place: {entry['target']}")
     return target, source
+
+
+def preview_undo(root: Path, run_id: str | None = None) -> list[dict]:
+    root = root_directory(root)
+    run = load_run(root, run_id)
+    moves = []
+    for entry in reversed(run["entries"]):
+        if entry["status"] == "undone":
+            continue
+        move = {"source": entry["target"], "target": entry["source"], "status": "ready"}
+        try:
+            if _restorable(root, entry) is None:
+                move["status"] = "already in place"
+        except (OSError, FilePilotError) as exc:
+            move.update(status="blocked", reason=str(exc))
+        moves.append(move)
+    return moves
 
 
 def undo(root: Path, run_id: str | None = None) -> dict:
