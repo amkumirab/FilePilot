@@ -45,6 +45,26 @@ class SafetyTests(unittest.TestCase):
         self.assertTrue((self.root / "report.pdf").exists())
         self.assertFalse((self.root / "Documents/report.pdf").exists())
 
+    def test_journal_failure_after_move_retains_recovery_information(self):
+        from filepilot.engine import history, undo
+        from filepilot.journal import save_run
+
+        writes = 0
+
+        def save(root, run):
+            nonlocal writes
+            writes += 1
+            if writes == 3:
+                raise OSError("test: disk full after moving")
+            save_run(root, run)
+
+        with patch("filepilot.engine.save_run", side_effect=save), self.assertRaises(OSError):
+            execute(build_plan(self.root))
+        self.assertFalse((self.root / "report.pdf").exists())
+        self.assertEqual(history(self.root)[0]["entries"][0]["status"], "pending")
+        self.assertEqual(undo(self.root)["status"], "undone")
+        self.assertEqual((self.root / "report.pdf").read_bytes(), b"keep these bytes")
+
     def test_invalid_journal_status_is_a_readable_error(self):
         run = execute(build_plan(self.root))
         path = self.root / ".filepilot/runs" / f"{run['id']}.json"

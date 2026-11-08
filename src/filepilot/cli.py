@@ -58,16 +58,19 @@ def _print_plan(plan: Plan, *, as_json: bool) -> None:
         print(f"  {move.source!r} -> {move.target!r} [{move.rule!r}]")
     for skipped in plan.skipped:
         print(f"  SKIP {skipped.source!r}: {skipped.reason}")
-    print("No files changed. Use 'filepilot organize FOLDER --apply' to execute.")
+    print("No files changed. Use 'filepilot organize FOLDER --apply' with the same --config.")
 
 
-def _print_run(run: dict, *, as_json: bool) -> int:
+def _print_run(run: dict, *, as_json: bool, restoring: bool = False) -> int:
     if as_json:
         _json(run)
     else:
         print(f"Run: {run['id']} | {run['status']}")
         for entry in run["entries"]:
-            print(f"  {entry['status']}: {entry['source']!r} -> {entry['target']!r}")
+            source, target = entry["source"], entry["target"]
+            if restoring:
+                source, target = target, source
+            print(f"  {entry['status']}: {source!r} -> {target!r}")
             if entry.get("error"):
                 print(f"    {entry['error']}")
     return 1 if run["status"] in {"partial", "undo_partial"} else 0
@@ -95,7 +98,7 @@ def _dispatch(args: argparse.Namespace) -> int:
                 print(f"{run['id']} | {run['status']} | {len(run['entries'])} file(s)")
     elif args.command == "undo":
         if args.apply:
-            return _print_run(undo(args.folder, args.run), as_json=args.json)
+            return _print_run(undo(args.folder, args.run), as_json=args.json, restoring=True)
         run = load_run(args.folder, args.run)
         preview = preview_undo(args.folder, run["id"])
         if args.json:

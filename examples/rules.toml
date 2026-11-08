@@ -1,0 +1,22 @@
+# First matching rule wins. Dates use the file's modification time.
+# {ext} includes the dot; {name} includes the original extension.
+
+[[rules]]
+name = "Invoices"
+extensions = ["pdf"]
+contains = "invoice"
+target = "Invoices/{year}/{month}"
+rename = "{year}-{month}-{day}_{stem}{ext}"
+
+[[rules]]
+name = "Documents"
+extensions = ["pdf", "docx", "txt"]
+target = "Documents"
+
+[[rules]]
+name = "Pictures"
+extensions = ["jpg", "jpeg", "png", "webp"]
+target = "Pictures/{year}/{month}"
+
+# Unmatched files stay in place. To match everything else, add a final rule
+# with target = "Other" and no extensions list.

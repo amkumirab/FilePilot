@@ -94,6 +94,13 @@ class CliTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertEqual(json.loads(result.stdout)["status"], "undo_partial")
 
+    def test_human_undo_output_shows_restoration_direction(self):
+        (self.root / "report.pdf").write_bytes(b"original")
+        self.assertEqual(self.command("organize", self.root, "--apply").returncode, 0)
+        result = self.command("undo", self.root, "--apply")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("'Documents/report.pdf' -> 'report.pdf'", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
