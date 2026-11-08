@@ -2,6 +2,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from filepilot.config import Rule, load_rules
 from filepilot.paths import FilePilotError
@@ -81,6 +82,20 @@ class PlannerTests(unittest.TestCase):
             encoding="utf-8",
         )
         self.assertEqual(load_rules(config)[0].contains, "bill")
+
+    def test_unrepresentable_modification_dates_have_readable_errors(self):
+        source = self.root / "report.pdf"
+        source.write_bytes(b"original")
+        for error in (OverflowError("timestamp overflow"), ValueError("year out of range")):
+            with (
+                self.subTest(error=error),
+                patch("filepilot.planner.datetime") as date,
+                self.assertRaises(FilePilotError),
+            ):
+                date.fromtimestamp.side_effect = error
+                build_plan(self.root)
+        self.assertEqual(source.read_bytes(), b"original")
+        self.assertFalse((self.root / ".filepilot").exists())
 
 
 if __name__ == "__main__":

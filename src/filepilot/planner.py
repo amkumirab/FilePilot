@@ -86,7 +86,10 @@ def build_plan(
         assert rule is not None
         safe_path(root, source.name)
         info = source.stat()
-        date = datetime.fromtimestamp(info.st_mtime)
+        try:
+            date = datetime.fromtimestamp(info.st_mtime)
+        except (OverflowError, OSError, ValueError) as exc:
+            raise FilePilotError(f"Unsupported modification timestamp: {source.name}") from exc
         fields = dict(
             name=source.name,
             stem=source.stem,
