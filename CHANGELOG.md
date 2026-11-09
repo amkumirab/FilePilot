@@ -12,6 +12,8 @@
 - Expand verification to 76 tests, including real process termination, native
   open-file behavior, dense collisions, binary round trips, and corrupted input.
 - Measure line and branch coverage across CLI subprocesses in CI.
+- Group filesystem tests into organization, recovery, native filesystem, and
+  input validation suites, preserving all 76 cases.
 
 ## 0.1.0 - 2026-11-08
 

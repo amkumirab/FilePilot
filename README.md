@@ -168,6 +168,19 @@ python -m build
 
 Tests use real isolated files and subprocesses, including interrupted operations,
 collisions, Unicode names, tampered journals, directory links, and process locks.
+Filesystem scenarios are grouped into focused suites:
+
+- `tests/test_organization.py`: rules, destination collisions, and file content.
+- `tests/test_recovery.py`: undo, interrupted runs, and recoverable failures.
+- `tests/test_native_filesystem.py`: native file handles, POSIX moves, and process locks.
+- `tests/test_input_validation.py`: invalid configuration and journal data.
+
+Run one suite with, for example:
+
+```bash
+python -m unittest discover -s tests -p test_recovery.py -v
+```
+
 The included CI workflow targets Windows and Ubuntu with Python 3.12 and 3.13.
 Remote CI results are available only after pushing the repository.
 See [the QA report](docs/qa-report.md) for measured coverage, tested failure
