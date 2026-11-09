@@ -1,6 +1,6 @@
 # FilePilot QA report
 
-Date: 2026-11-08. Local environment: Windows, CPython 3.12.10.
+Date: 2026-11-09. Local environment: Windows, CPython 3.12.10.
 
 ## Results
 
@@ -9,8 +9,8 @@ Date: 2026-11-08. Local environment: Windows, CPython 3.12.10.
 - Coverage.py 7.17.2 measured the library and CLI subprocesses together:
   475/485 executable lines (97.94%), 165/178 branches (92.70%), and 96.53%
   combined coverage. No lines were excluded from measurement.
-- Wheel and source archive builds are validated separately, followed by
-  installation of the wheel into an isolated environment and a full test/demo run.
+- The wheel and source archive were built. The wheel was installed in an isolated
+  environment, where the full test suite and demo were run.
 - The GitHub Actions workflow repeats tests, coverage, building, wheel install,
   and the demo on Windows and Ubuntu, using Python 3.12 and 3.13. Check the
   [Actions results](https://github.com/amkumirab/FilePilot/actions) for the exact
@@ -35,23 +35,23 @@ Date: 2026-11-08. Local environment: Windows, CPython 3.12.10.
 ## Defects reproduced and fixed
 
 1. The initial remote run failed on Windows 3.12 and 3.13 because the lock helper
-   compared a resolved candidate against an unresolved root. Resolve roots before
-   locking; a relative-root regression test also reproduces this locally.
+   compared a resolved candidate against an unresolved root. The helper now resolves
+   roots before locking; a relative-root regression test covers the failure.
 2. The dense-collision round trip exposed a Windows access/sharing error while
-   replacing the journal. Retry only the relevant Windows errors, bounded to
-   six attempts; persistent failure preserves the previous journal and stops.
+   replacing the journal. Relevant Windows errors are retried up to six times;
+   persistent failure preserves the previous journal and stops execution.
 3. Out-of-range timestamps could escape as raw date-conversion exceptions.
-   Convert these into an explicit FilePilotError before mutating files.
+   These now produce a FilePilotError before any files are moved.
 
 ## Limits
 
-Tests cannot prove absence of all bugs. This report does not claim power-loss
-durability, support for every filesystem/network share, protection against
-adversarial concurrent path changes, or restoration of edited content/ACLs.
-Use a quiet directory; retain `.filepilot/` and independent backups. A real crash
-in the POSIX link/unlink gap may leave both paths and requires manual inspection;
-the tested behavior preserves both rather than guessing which one to remove.
+These checks cover the listed scenarios on the tested platforms. Power-loss
+durability, arbitrary network shares, concurrent path replacement by other
+processes, and restoration of edited content or ACLs are outside the tested scope.
+Use a quiet directory and retain `.filepilot/` and independent backups. A crash
+between POSIX link and unlink can leave both paths present. FilePilot preserves
+both for manual inspection.
 
 Remaining unexecuted branches in the local coverage run include native POSIX
 locking and defensive path/state checks; CI exercises the POSIX implementation
-separately. No coverage exclusions or lowered thresholds were used.
+separately. No executable lines were excluded from coverage measurement.

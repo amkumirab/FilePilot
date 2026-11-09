@@ -1,10 +1,11 @@
 # FilePilot
 
-**A preview-first file organizer with a way back.**
+[![CI](https://github.com/amkumirab/FilePilot/actions/workflows/ci.yml/badge.svg)](https://github.com/amkumirab/FilePilot/actions/workflows/ci.yml)
 
-Turn a cluttered folder into an organized workspace using built-in categories or
-your own TOML rules. Inspect every move before applying it and restore a saved
-run when you need to undo it. Python 3.12+, no runtime dependencies.
+FilePilot sorts files into folders using built-in categories or custom TOML rules.
+It shows a preview before moving anything and keeps a history for undoing moves.
+
+Requires Python 3.12 or newer. No runtime dependencies.
 
 ```text
 $ filepilot scan ./inbox
@@ -22,7 +23,7 @@ No files changed.
 - **Ordered rules.** Match extensions and optional filename text; the first match wins.
 - **Date folders and renaming.** Use the file's modification date in templates.
 - **Collision handling.** Existing and planned names get numbered alternatives,
-  such as `report (2).pdf`; files are never intentionally replaced.
+  such as `report (2).pdf`.
 - **Journaled runs.** Every attempted move is recorded in `.filepilot/runs/`.
 - **Content-aware undo.** Restore original paths after checking SHA-256 hashes.
   Changed files and occupied original paths are left in place with an explanation.
@@ -182,7 +183,7 @@ python -m unittest discover -s tests -p test_recovery.py -v
 ```
 
 The included CI workflow targets Windows and Ubuntu with Python 3.12 and 3.13.
-Remote CI results are available only after pushing the repository.
+Results are available in [GitHub Actions](https://github.com/amkumirab/FilePilot/actions).
 See [the QA report](docs/qa-report.md) for measured coverage, tested failure
 scenarios, and the limits of verification.
 

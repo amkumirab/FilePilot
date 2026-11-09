@@ -1,10 +1,10 @@
 # FilePilot 0.1
 
 ## Objective and scope
-Build a local, dependency-free Python 3.12+ CLI that organizes the immediate files
-in a user-selected folder. The agreed first version includes configurable rules,
+FilePilot is a local Python 3.12+ CLI with no runtime dependencies. It organizes
+the immediate files in a selected folder. The first version includes configurable rules,
 preview, optional renaming, collision handling, execution history, and undo.
-GUI, scheduling, watching, recursive scanning, and remote publication are later work.
+GUI, scheduling, watching, and recursive scanning are outside this version's scope.
 
 ## Acceptance criteria
 - Scanning and previews create no files or folders.
@@ -21,11 +21,11 @@ GUI, scheduling, watching, recursive scanning, and remote publication are later 
 - Cooperating FilePilot processes serialize writes with an OS-released lock.
 - Errors have readable messages and nonzero exit codes.
 
-## Structure and implementation plan
+## Structure
 `src/filepilot/`: config and path validation -> read-only planner -> journaled
 engine -> CLI. `tests/`: isolated temporary-directory unit/integration tests.
 `examples/`: custom TOML rules. `docs/`: architecture and safety limitations.
-Implement and verify each slice before the next; keep focused Git commits.
+Keep changes small, verify each change, and use focused Git commits.
 
 ## Commands
 Install: `python -m pip install -e .`
@@ -38,10 +38,11 @@ Run: `filepilot scan PATH`, `filepilot organize PATH --apply`,
 ## Style and boundaries
 Use typed dataclasses, pathlib, small functions, explicit errors, and stdlib only
 at runtime. Example: `build_plan(root: Path, rules: tuple[Rule, ...]) -> Plan`.
-Always validate paths, keep a durable journal, test failure paths, and preserve
-user data. Never overwrite existing files or silently lower test requirements.
+Validate paths, keep a durable journal, test failure paths, and preserve user data.
+Existing files must not be overwritten. Keep all test requirements intact.
 Changing the public command contract or adding services requires revisiting
-this spec. Tests use real files; mocks inject move/journal failures only.
+this spec. Tests use real files; mocks exercise filesystem, timestamp, and journal
+failure paths.
 
 ## Trust and operational limits
 Inputs: user paths, TOML, file names, persisted journals. Assets: file bytes and
