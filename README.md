@@ -4,6 +4,8 @@
 
 FilePilot sorts files into folders using built-in categories or custom TOML rules.
 It shows a preview before moving anything and keeps a history for undoing moves.
+The `watch` command processes new files after their metadata has stayed unchanged
+for a configurable interval.
 
 Requires Python 3.12 or newer. No runtime dependencies.
 
@@ -74,6 +76,35 @@ inside this checkout's ignored `.demo/` directory:
 ```bash
 python scripts/demo.py
 ```
+
+## Watch a folder
+
+```bash
+filepilot watch ./inbox                              # continuous preview
+filepilot watch ./inbox --apply                      # organize stable files
+filepilot watch ./inbox --apply --config rules.toml
+filepilot watch ./inbox --interval 1 --settle 5 --json
+```
+
+The watcher runs in the foreground. Press **Ctrl+C** to stop it before using undo.
+By default it polls once per second and waits for two seconds of unchanged
+metadata. Files already in the folder also wait before being processed. A quiet
+interval is a heuristic; keep temporary suffixes while writers are still working.
+
+Previews are reported once per unchanged file. Applying watchers record each
+batch in history and retry failed moves up to three times per observed version
+of a file. Only one applying watcher can run for a folder. Rules are loaded at
+startup; restart the watcher after editing them.
+
+`--json` emits JSON Lines events. Use `--max-cycles N` for a bounded run. See
+[watching details](docs/watching.md) for events, exit codes, and recovery behavior.
+
+![Watching delayed files and undoing their moves](docs/watch-demo.gif)
+
+Run the isolated demo with `python scripts/watch_demo.py`. It simulates a download,
+checks that each file moves once, stops watching, and verifies undo. Regenerate
+the GIF with `python scripts/watch_demo.py --gif docs/watch-demo.gif` after
+installing the optional Pillow package. GIF export is not required to run FilePilot.
 
 ## Custom rules
 
@@ -189,7 +220,6 @@ scenarios, and the limits of verification.
 
 ## Roadmap
 
-- Folder watching with a download-completion delay.
 - Scheduled runs and reports.
 - Desktop interface for reviewing plans and editing rules.
 

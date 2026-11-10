@@ -47,3 +47,5 @@ jobs:
         run: filepilot --version
       - name: Exercise packaged organizer and undo
         run: python scripts/demo.py
+      - name: Exercise packaged watcher and recovery
+        run: python scripts/watch_demo.py

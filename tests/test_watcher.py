@@ -34,6 +34,12 @@ class WatcherTests(unittest.TestCase):
         self.assertEqual(watcher.poll(100), [])
         self.assertEqual(list(self.root.iterdir()), [source])
 
+    def test_settling_uses_elapsed_time_with_a_negative_clock_epoch(self):
+        self.file()
+        watcher = FolderWatcher(self.root, settle=1)
+        self.assertEqual(watcher.poll(-10), [])
+        self.assertEqual(watcher.poll(-9)[0]["event"], "preview")
+
     def test_changes_reset_the_quiet_interval(self):
         source = self.file()
         watcher = FolderWatcher(self.root, settle=2)

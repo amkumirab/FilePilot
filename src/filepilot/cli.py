@@ -120,6 +120,8 @@ def _print_watch_event(event: dict, *, as_json: bool) -> None:
             f"Stopped: {event['reason']} | {event['cycles']} polls | "
             f"{event['moved']} moved | pending failures: {event['failed']}"
         )
+        if event["reason"] == "interrupted":
+            print("Check history for any interrupted batch before using undo.")
     sys.stdout.flush()
 
 

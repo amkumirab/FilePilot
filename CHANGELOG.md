@@ -1,19 +1,26 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 - 2026-11-10
+
+### Added
+- Foreground folder watching with configurable polling and settling intervals.
+- Preview deduplication, bounded move retries, a single applying watcher per root,
+  journaled batches, JSON Lines events, and graceful Ctrl+C shutdown.
+- An isolated live watcher demo and animated README example.
+
+### Changed
+- Extend CI to exercise the installed watch command and subsequent undo.
+- Expand verification to 113 tests, including native file sharing, stable-file
+  tracking, duplicate suppression, retry limits, and interrupted watches.
+- Measure line and branch coverage across CLI subprocesses in CI.
+- Group filesystem tests into organization, recovery, native filesystem, and
+  input validation suites.
 
 ### Fixed
 - Normalize lock roots so relative paths and Windows short-path aliases work.
 - Retry transient Windows journal access/sharing conflicts without replacing
   the previous journal on persistent failure.
 - Explain unsupported file modification timestamps without a traceback.
-
-### Changed
-- Expand verification to 76 tests, including real process termination, native
-  open-file behavior, dense collisions, binary round trips, and corrupted input.
-- Measure line and branch coverage across CLI subprocesses in CI.
-- Group filesystem tests into organization, recovery, native filesystem, and
-  input validation suites, preserving all 76 cases.
 
 ## 0.1.0 - 2026-11-08
 

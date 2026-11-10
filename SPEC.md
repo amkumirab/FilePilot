@@ -1,14 +1,15 @@
-# FilePilot 0.1
+# FilePilot 0.2
 
 ## Objective and scope
 FilePilot is a local Python 3.12+ CLI with no runtime dependencies. It organizes
 the immediate files in a selected folder. The first version includes configurable rules,
-preview, optional renaming, collision handling, execution history, and undo.
-GUI, scheduling, watching, and recursive scanning are outside this version's scope.
+preview, optional renaming, collision handling, execution history, undo, and
+foreground folder watching. GUI, scheduling, and recursive scanning are outside
+this version's scope. The watch command is specified in [watching.md](docs/watching.md).
 
 ## Acceptance criteria
 - Scanning and previews create no files or folders.
-- Only `organize --apply` and `undo --apply` move files.
+- Only `organize --apply`, `watch --apply`, and `undo --apply` move files.
 - Rules are ordered TOML records: extension and optional filename substring match;
   first match wins. Directory and filename templates use modification dates.
 - Files with colliding names receive deterministic numbered suffixes; no file is

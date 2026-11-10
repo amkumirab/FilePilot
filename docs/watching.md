@@ -29,6 +29,8 @@ Removing or replacing the root stops the watcher with an error.
 
 `--json` writes one JSON object per event: `started`, `preview`, `run`, `error`,
 or `stopped`. Ordinary commands retain their existing JSON format.
+Fatal errors go to stderr, including in JSON mode; a stopped event is emitted
+for the poll limit or Ctrl+C, while fatal failures close the stream with exit 2.
 Exit codes: 0 for a normal stop, 1 for remaining failed files at a poll limit,
 2 for invalid input or a fatal error, and 130 for Ctrl+C.
 
@@ -36,8 +38,11 @@ Stop the watcher before using undo; a running watcher can see restored files as
 new input. Use history to choose a batch, then restore it with the existing undo
 command. A crash during a batch retains the same recovery information as an
 ordinary organize run.
+After an interruption, the summary counts reported batches; inspect history
+for any batch that was still in progress when the watcher stopped.
 
 A quiet interval is a metadata heuristic, not proof that a download or another
 writer has finished. Configure a longer interval when needed and keep temporary
 suffixes until writers finish. Rules are loaded once at startup; restart the
 watcher after editing them. Deduplication is in memory and resets on restart.
+Files that disappear or cannot be observed settle again when they reappear.

@@ -42,7 +42,7 @@ class _Observed:
     since: float
     handled: bool = False
     attempts: int = 0
-    retry_at: float = 0.0
+    retry_at: float = -math.inf
 
 
 def _signature(source: Path) -> tuple[int, ...]:

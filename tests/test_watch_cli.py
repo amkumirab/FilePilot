@@ -113,6 +113,23 @@ with patch('filepilot.watcher.sleep', side_effect=KeyboardInterrupt):
         self.assertEqual(events[-1]["reason"], "interrupted")
         self.assertEqual(self.watch("--apply").returncode, 0)
 
+    def test_human_interrupt_summary_points_to_recovery_history(self):
+        program = """
+import sys
+from unittest.mock import patch
+from filepilot.cli import main
+with patch('filepilot.watcher.sleep', side_effect=KeyboardInterrupt):
+    sys.exit(main(['watch', sys.argv[1], '--apply']))
+"""
+        result = subprocess.run(
+            [sys.executable, "-c", program, str(self.root)],
+            capture_output=True,
+            text=True,
+            timeout=20,
+        )
+        self.assertEqual(result.returncode, 130)
+        self.assertIn("history", result.stdout)
+
     def test_scan_errors_are_visible_once_and_return_one_at_a_poll_limit(self):
         program = """
 import sys
