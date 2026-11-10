@@ -26,7 +26,7 @@ class CliTests(unittest.TestCase):
     def test_help_exposes_commands(self):
         result = self.command("--help")
         self.assertEqual(result.returncode, 0, result.stderr)
-        for command in ("scan", "organize", "undo", "history", "init"):
+        for command in ("scan", "organize", "watch", "undo", "history", "init"):
             self.assertIn(command, result.stdout)
 
     def test_full_cli_workflow_and_both_previews_are_read_only(self):

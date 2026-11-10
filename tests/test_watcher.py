@@ -198,6 +198,40 @@ class WatcherTests(unittest.TestCase):
             self.fail("unsafe lock name accepted")
         self.assertFalse((self.root / ".filepilot").exists())
 
+    def test_replaced_root_stops_before_processing_the_new_directory(self):
+        watcher = FolderWatcher(self.root)
+        with tempfile.TemporaryDirectory() as replacement:
+            container = Path(replacement).resolve()
+            destination = container / "original"
+            self.assertTrue(destination.is_relative_to(container))
+            self.root.rename(destination)
+            self.root.mkdir()
+            with self.assertRaises(FilePilotError):
+                watcher.poll(0)
+
+    def test_file_disappearing_during_snapshot_does_not_stop_the_watcher(self):
+        source = self.file()
+        watcher = FolderWatcher(self.root, settle=1)
+        with patch("filepilot.watcher._signature", side_effect=FileNotFoundError):
+            self.assertEqual(watcher.poll(0), [])
+        self.assertEqual(source.read_bytes(), b"original")
+        self.assertEqual(watcher.poll(1), [])
+        self.assertEqual(len(watcher.poll(2)), 1)
+
+    def test_file_disappearing_after_planning_is_not_executed(self):
+        source = self.file()
+        watcher = FolderWatcher(self.root, settle=1, apply=True)
+        watcher.poll(0)
+
+        def removed(*args, **kwargs):
+            plan = build_plan(*args, **kwargs)
+            source.unlink()
+            return plan
+
+        with patch("filepilot.watcher.build_plan", side_effect=removed):
+            self.assertEqual(watcher.poll(1), [])
+        self.assertFalse((self.root / ".filepilot").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

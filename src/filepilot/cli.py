@@ -10,6 +10,7 @@ from .config import DEFAULT_RULES, EXAMPLE_CONFIG, load_rules
 from .engine import execute, history, load_run, preview_undo, undo
 from .paths import FilePilotError
 from .planner import Plan, build_plan
+from .watcher import WatchOptions, watch_folder
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -19,24 +20,46 @@ def _parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--version", action="version", version=f"FilePilot {__version__}")
     commands = parser.add_subparsers(dest="command", required=True)
-    for name in ("scan", "organize", "undo", "history"):
+    for name in ("scan", "organize", "watch", "undo", "history"):
         command = commands.add_parser(
             name,
             help={
                 "scan": "Preview file organization without changing anything.",
                 "organize": "Preview organization, or move files with --apply.",
+                "watch": "Watch for stable files; preview unless --apply is supplied.",
                 "undo": "Preview restoration, or restore files with --apply.",
                 "history": "List saved runs for a folder.",
             }[name],
         )
         command.add_argument("folder", type=Path, help="Folder to organize (not recursive).")
-        command.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
-        if name in ("scan", "organize"):
+        command.add_argument(
+            "--json",
+            action="store_true",
+            help=(
+                "Print JSON Lines events." if name == "watch" else "Print machine-readable JSON."
+            ),
+        )
+        if name in ("scan", "organize", "watch"):
             command.add_argument("--config", type=Path, help="Use custom TOML rules.")
-        if name in ("organize", "undo"):
+        if name in ("organize", "undo", "watch"):
             command.add_argument("--apply", action="store_true", help="Actually move files.")
         if name == "undo":
             command.add_argument("--run", help="Run ID; defaults to latest run not fully undone.")
+        if name == "watch":
+            command.add_argument(
+                "--interval", type=float, default=1.0, help="Seconds between polls (default: 1)."
+            )
+            command.add_argument(
+                "--settle",
+                type=float,
+                default=2.0,
+                help="Seconds of unchanged file metadata before processing (default: 2).",
+            )
+            command.add_argument(
+                "--max-cycles",
+                type=int,
+                help="Stop after this many polls; otherwise run until Ctrl+C.",
+            )
     initialize = commands.add_parser(
         "init", help="Write an example TOML config without overwriting."
     )
@@ -76,11 +99,48 @@ def _print_run(run: dict, *, as_json: bool, restoring: bool = False) -> int:
     return 1 if run["status"] in {"partial", "undo_partial"} else 0
 
 
+def _print_watch_event(event: dict, *, as_json: bool) -> None:
+    if as_json:
+        print(json.dumps(event, ensure_ascii=True), flush=True)
+        return
+    kind = event["event"]
+    if kind == "started":
+        mode = "apply" if event["apply"] else "preview"
+        print(f"Watching {event['folder']} | {mode} | Ctrl+C to stop")
+    elif kind == "preview":
+        print(f"Preview: {len(event['plan']['moves'])} stable file(s)")
+        for move in event["plan"]["moves"]:
+            print(f"  {move['source']!r} -> {move['target']!r}")
+    elif kind == "run":
+        _print_run(event["run"], as_json=False)
+    elif kind == "error":
+        print(f"Watch error for {event['source']!r}: {event['message']}", file=sys.stderr)
+    elif kind == "stopped":
+        print(
+            f"Stopped: {event['reason']} | {event['cycles']} polls | "
+            f"{event['moved']} moved | pending failures: {event['failed']}"
+        )
+    sys.stdout.flush()
+
+
 def _dispatch(args: argparse.Namespace) -> int:
     if args.command == "init":
         with args.output.open("x", encoding="utf-8", newline="\n") as stream:
             stream.write(EXAMPLE_CONFIG)
         print(f"Created {args.output}. Use --config {args.output} with scan or organize.")
+    elif args.command == "watch":
+        options = WatchOptions(
+            interval=args.interval, settle=args.settle, max_cycles=args.max_cycles
+        )
+        rules = load_rules(args.config) if args.config else DEFAULT_RULES
+        return watch_folder(
+            args.folder,
+            rules,
+            apply=args.apply,
+            options=options,
+            exclude=(args.config,) if args.config else (),
+            emit=lambda event: _print_watch_event(event, as_json=args.json),
+        )
     elif args.command in ("scan", "organize"):
         rules = load_rules(args.config) if args.config else DEFAULT_RULES
         plan = build_plan(args.folder, rules, exclude=(args.config,) if args.config else ())
