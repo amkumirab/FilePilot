@@ -59,13 +59,19 @@ def _unique_target(root: Path, relative: str, reserved: set[str]) -> str:
 
 
 def build_plan(
-    root: Path, rules: tuple[Rule, ...] = DEFAULT_RULES, *, exclude: tuple[Path, ...] = ()
+    root: Path,
+    rules: tuple[Rule, ...] = DEFAULT_RULES,
+    *,
+    exclude: tuple[Path, ...] = (),
+    include: frozenset[str] | None = None,
 ) -> Plan:
     root = root_directory(root)
     excluded = {path.resolve() for path in exclude}
     moves, skipped = [], []
     reserved: set[str] = set()
     for source in sorted(root.iterdir(), key=lambda path: (path.name.casefold(), path.name)):
+        if include is not None and source.name not in include:
+            continue
         reason = ""
         if is_link(source):
             reason = "link or junction"
