@@ -16,12 +16,14 @@ RUN_STATES = {"running", "completed", "partial", "undoing", "undo_partial", "und
 
 
 @contextmanager
-def locked(root: Path):
+def locked(root: Path, *, name: str = "lock"):
     """The OS releases the lock even after process termination."""
+    if name not in {"lock", "watch.lock"}:
+        raise FilePilotError("Unsupported lock name.")
     root = root_directory(root)
     state = safe_path(root, ".filepilot", internal=True)
     state.mkdir(exist_ok=True)
-    lock_path = safe_path(root, ".filepilot/lock", internal=True)
+    lock_path = safe_path(root, f".filepilot/{name}", internal=True)
     with lock_path.open("a+b") as stream:
         stream.seek(0)
         try:

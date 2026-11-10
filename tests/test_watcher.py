@@ -2,8 +2,11 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from filepilot.config import Rule
+from filepilot.engine import history, undo
+from filepilot.journal import locked
 from filepilot.paths import FilePilotError
 from filepilot.planner import build_plan
 from filepilot.watcher import FolderWatcher, WatchOptions
@@ -99,6 +102,101 @@ class WatcherTests(unittest.TestCase):
         for value in (0, -1):
             with self.subTest(value=value), self.assertRaises(FilePilotError):
                 WatchOptions(max_cycles=value)
+
+    def test_applying_a_stable_batch_uses_history_and_can_be_undone(self):
+        source = self.file()
+        watcher = FolderWatcher(self.root, settle=1, apply=True)
+        watcher.poll(0)
+        events = watcher.poll(1)
+        self.assertEqual(events[0]["event"], "run")
+        self.assertEqual(events[0]["run"]["status"], "completed")
+        self.assertFalse(source.exists())
+        self.assertEqual(watcher.poll(2), [])
+        self.assertEqual(len(history(self.root)), 1)
+        self.assertEqual(undo(self.root)["status"], "undone")
+        self.assertEqual(source.read_bytes(), b"original")
+
+    def test_failed_moves_have_spaced_bounded_retries_and_changes_reset_them(self):
+        source = self.file()
+        watcher = FolderWatcher(self.root, settle=1, apply=True)
+        watcher.poll(0)
+        with patch(
+            "filepilot.engine._move_no_replace", side_effect=PermissionError("busy")
+        ) as move:
+            self.assertEqual(watcher.poll(1)[0]["run"]["status"], "partial")
+            self.assertEqual(watcher.poll(1.5), [])
+            watcher.poll(2)
+            watcher.poll(3)
+            self.assertEqual(watcher.poll(100), [])
+            self.assertEqual(move.call_count, 3)
+        self.assertTrue(watcher.has_failures)
+        source.write_bytes(b"modified")
+        self.assertEqual(watcher.poll(101), [])
+        self.assertEqual(watcher.poll(102)[0]["run"]["status"], "completed")
+        self.assertFalse(watcher.has_failures)
+
+    def test_changes_during_planning_restart_settling(self):
+        source = self.file()
+        watcher = FolderWatcher(self.root, settle=1, apply=True)
+        watcher.poll(0)
+        original = build_plan
+
+        def changed(*args, **kwargs):
+            plan = original(*args, **kwargs)
+            source.write_bytes(b"changed during planning")
+            return plan
+
+        with patch("filepilot.watcher.build_plan", side_effect=changed):
+            self.assertEqual(watcher.poll(1), [])
+        self.assertFalse((self.root / ".filepilot").exists())
+        self.assertEqual(watcher.poll(2)[0]["run"]["status"], "completed")
+
+    def test_disappearing_files_are_removed_from_tracking(self):
+        source = self.file()
+        watcher = FolderWatcher(self.root, settle=1)
+        watcher.poll(0)
+        source.unlink()
+        self.assertEqual(watcher.poll(1), [])
+        self.file()
+        self.assertEqual(watcher.poll(2), [])
+        self.assertEqual(len(watcher.poll(3)), 1)
+
+    def test_scan_errors_are_reported_once_then_retried(self):
+        self.file()
+        watcher = FolderWatcher(self.root, settle=1)
+        with patch("filepilot.watcher._signature", side_effect=PermissionError("busy")):
+            self.assertEqual(watcher.poll(0)[0]["event"], "error")
+            self.assertEqual(watcher.poll(1), [])
+            self.assertTrue(watcher.has_failures)
+        self.assertEqual(watcher.poll(2), [])
+        self.assertEqual(len(watcher.poll(3)), 1)
+        self.assertFalse(watcher.has_failures)
+
+    def test_removed_root_stops_watching(self):
+        watcher = FolderWatcher(self.root)
+        self.root.rmdir()
+        with self.assertRaises(OSError):
+            watcher.poll(0)
+
+    def test_journal_errors_are_fatal_and_do_not_become_repeated_attempts(self):
+        source = self.file()
+        watcher = FolderWatcher(self.root, settle=1, apply=True)
+        watcher.poll(0)
+        with (
+            patch("filepilot.engine.save_run", side_effect=OSError("disk full")),
+            self.assertRaises(OSError),
+        ):
+            watcher.poll(1)
+        self.assertEqual(source.read_bytes(), b"original")
+
+    def test_named_watcher_lock_does_not_block_the_execution_lock(self):
+        with locked(self.root, name="watch.lock"), locked(self.root):
+            self.assertTrue((self.root / ".filepilot/watch.lock").exists())
+
+    def test_invalid_lock_name_is_rejected_without_creating_state(self):
+        with self.assertRaises(FilePilotError), locked(self.root, name="../other"):
+            self.fail("unsafe lock name accepted")
+        self.assertFalse((self.root / ".filepilot").exists())
 
 
 if __name__ == "__main__":
