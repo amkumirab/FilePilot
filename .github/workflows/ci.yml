@@ -2,8 +2,10 @@ name: CI
 
 on:
   push:
+    branches: ["**"]
   pull_request:
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -49,3 +51,33 @@ jobs:
         run: python scripts/demo.py
       - name: Exercise packaged watcher and recovery
         run: python scripts/watch_demo.py
+
+  windows-binary:
+    name: Windows x64 executable
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: "3.13"
+          architecture: x64
+          cache: pip
+          cache-dependency-path: requirements-build.txt
+      - name: Install pinned Windows build tools
+        run: python -m pip install -r requirements-build.txt
+      - name: Build portable release
+        run: python scripts/build_windows.py
+      - name: Test the executable extracted from its ZIP
+        run: python scripts/verify_binary.py --bundle-dir dist/releases
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: filepilot-windows-x64
+          path: |
+            dist/releases/*.zip
+            dist/releases/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0

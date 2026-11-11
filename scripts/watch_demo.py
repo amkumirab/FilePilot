@@ -41,7 +41,11 @@ def main() -> None:
     parser.add_argument(
         "--gif", type=Path, help="Export the checked demo scenes as an animated GIF."
     )
+    parser.add_argument("--executable", type=Path, help="Run a standalone FilePilot executable.")
     args = parser.parse_args()
+    prefix = (
+        [str(args.executable.resolve())] if args.executable else [sys.executable, "-m", "filepilot"]
+    )
     demo_root = Path(__file__).resolve().parents[1] / ".demo"
     demo_root.mkdir(exist_ok=True)
     command = "$ filepilot watch inbox --apply --interval 0.05 --settle 0.15 --max-cycles 20"
@@ -50,9 +54,7 @@ def main() -> None:
         root = Path(directory)
         process = subprocess.Popen(
             [
-                sys.executable,
-                "-m",
-                "filepilot",
+                *prefix,
                 "watch",
                 str(root),
                 "--apply",
@@ -68,6 +70,7 @@ def main() -> None:
             stderr=subprocess.PIPE,
             text=True,
             encoding="utf-8",
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
         try:
             first = process.stdout.readline()
@@ -103,9 +106,7 @@ def main() -> None:
             for run in reversed(runs):
                 subprocess.run(
                     [
-                        sys.executable,
-                        "-m",
-                        "filepilot",
+                        *prefix,
                         "undo",
                         str(root),
                         "--run",
@@ -114,6 +115,7 @@ def main() -> None:
                     ],
                     check=True,
                     capture_output=True,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
                 )
             assert (root / "download.pdf").read_bytes() == b"download finished"
             assert (root / "photo.png").read_bytes() == b"demo picture"

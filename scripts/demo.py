@@ -1,5 +1,6 @@
 """Run an isolated preview -> organize -> undo demonstration."""
 
+import argparse
 import json
 import subprocess
 import sys
@@ -8,6 +9,12 @@ from pathlib import Path
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--executable", type=Path, help="Run a standalone FilePilot executable.")
+    args = parser.parse_args()
+    prefix = (
+        [str(args.executable.resolve())] if args.executable else [sys.executable, "-m", "filepilot"]
+    )
     demo_root = Path(__file__).resolve().parents[1] / ".demo"
     demo_root.mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="inbox-", dir=demo_root) as directory:
@@ -27,11 +34,12 @@ def main() -> None:
         def run(*args: str) -> str:
             print(f"\n$ filepilot {' '.join(args)} <demo-folder>", flush=True)
             result = subprocess.run(
-                [sys.executable, "-m", "filepilot", args[0], str(root), *args[1:]],
+                [*prefix, args[0], str(root), *args[1:]],
                 capture_output=True,
                 text=True,
                 encoding="utf-8",
                 check=True,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
             )
             print(result.stdout, end="", flush=True)
             return result.stdout
