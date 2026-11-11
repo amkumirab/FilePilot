@@ -7,7 +7,8 @@ It shows a preview before moving anything and keeps a history for undoing moves.
 The `watch` command processes new files after their metadata has stayed unchanged
 for a configurable interval.
 
-Requires Python 3.12 or newer. No runtime dependencies.
+The source package requires Python 3.12 or newer and has no runtime dependencies.
+The standalone Windows download includes Python.
 
 ```text
 $ filepilot scan ./inbox
@@ -32,7 +33,26 @@ No files changed.
 - **Automation-friendly output.** `--json` and documented exit codes.
 - **Local operation.** No accounts, API keys, network calls, or telemetry.
 
-## Install from this checkout
+## Windows download
+
+[Download the latest Windows x64 release](https://github.com/amkumirab/FilePilot/releases/latest).
+
+Extract `FilePilot-VERSION-windows-x64.zip`, open PowerShell in the extracted
+folder, and run:
+
+```powershell
+.\FilePilot.exe --help
+.\FilePilot.exe scan "$env:USERPROFILE\Downloads"
+.\FilePilot.exe watch "$env:USERPROFILE\Downloads"
+```
+
+These commands show previews. Add `--apply` to organize files. Stop watching
+with Ctrl+C before using undo. No Python installation is needed for this build.
+The ZIP includes sample rules, an offline guide, licenses, and build information.
+Use the release's `SHA256SUMS.txt` to verify the downloaded ZIP. The executable
+is unsigned. See [Windows builds and releases](docs/windows-release.md).
+
+## Install from source
 
 Windows PowerShell:
 
@@ -197,6 +217,19 @@ python -m coverage combine
 python -m coverage report
 python -m build
 ```
+
+To build the Windows x64 download in a dedicated Windows environment:
+
+```powershell
+py -3.13 -m venv .venv-build
+.\.venv-build\Scripts\python.exe -m pip install -r requirements-build.txt
+.\.venv-build\Scripts\python.exe scripts\build_windows.py
+.\.venv-build\Scripts\python.exe scripts\verify_binary.py --bundle-dir dist\releases
+```
+
+CI runs the same binary checks. Tags in the form `vX.Y.Z` publish the tested
+Windows artifact after the full quality matrix succeeds and the version and
+checksums agree. [Release procedure](docs/windows-release.md).
 
 Tests use real isolated files and subprocesses, including interrupted operations,
 collisions, Unicode names, tampered journals, directory links, and process locks.

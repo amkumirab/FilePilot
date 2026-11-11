@@ -1,15 +1,23 @@
 # FilePilot QA report
 
-Date: 2026-11-10. Version: 0.2.0. Local environment: Windows, CPython 3.12.10.
+Date: 2026-11-11. Version: 0.2.1. Local environment: Windows, CPython 3.12.10.
 
 ## Results
 
-- 113 unittest cases passed, with no skipped tests.
+- 128 unittest cases passed, with no skipped tests.
 - Ruff lint and formatting checks passed.
 - Coverage.py 7.17.2 measured the library and CLI subprocesses together:
   641/651 executable lines (98.46%), 228/242 branches (94.21%), and 97.31%
   combined coverage. No lines were excluded from measurement.
 - The watcher module reached 100% line and branch coverage in the local run.
+- The standalone Windows executable was extracted from its ZIP and tested with
+  Python-related environment variables removed and PATH limited to System32.
+  Both organization and live watching demos passed against the executable.
+- An existing 0.2.0 wheel installation created a run in a disposable folder;
+  the standalone 0.2.1 executable restored that run and retained the original bytes.
+- Pinned Windows build dependencies were audited with pip-audit; no known
+  vulnerabilities were reported at the time of this check. This audit does not
+  assess the bundled interpreter or replace a broader security review.
 - The wheel and source archive were built. The wheel was installed in an isolated
   environment, where the full test suite and demo were run.
 - The GitHub Actions workflow repeats tests, coverage, building, wheel install,
@@ -33,6 +41,7 @@ Date: 2026-11-10. Version: 0.2.0. Local environment: Windows, CPython 3.12.10.
 | Inputs | Invalid TOML types/templates, malformed JSON/non-UTF-8 journals, duplicate entries, invalid hashes and out-of-root journal paths |
 | CLI | All commands, help/version, JSON, human history, missing folders, invalid run IDs, exit codes 0/1/2/130 |
 | Watching | Stable metadata, replaced identities, changes during planning, duplicate previews, retries, root removal/replacement, read-only mode, named locks, JSON Lines, bounded runs, and interruption |
+| Release | Version/tag matching, archive contents, checksum changes, path traversal, symbolic links, clean-build provenance, source commit, notices, and missing resources |
 
 ## Defects reproduced and fixed
 

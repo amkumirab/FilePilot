@@ -1,0 +1,54 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: "3.13"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: filepilot-windows-x64
+          path: release
+      - name: Verify source tag, bundle version, checksum, and build commit
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          release_commit=$(git rev-parse HEAD)
+          python scripts/release_bundle.py verify --directory release --tag "$RELEASE_TAG" --commit "$release_commit"
+      - name: Upload draft, verify downloaded assets, and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          release_version=$(python scripts/release_bundle.py version --tag "$RELEASE_TAG")
+          release_commit=$(git rev-parse HEAD)
+          release_zip="FilePilot-${release_version}-windows-x64.zip"
+          gh release create "$RELEASE_TAG" --draft --verify-tag --title "FilePilot ${release_version}" --notes-file docs/release-notes.md "release/$release_zip" release/SHA256SUMS.txt
+          gh release download "$RELEASE_TAG" --dir uploaded --pattern "$release_zip" --pattern SHA256SUMS.txt
+          python scripts/release_bundle.py verify --directory uploaded --tag "$RELEASE_TAG" --commit "$release_commit"
+          gh release edit "$RELEASE_TAG" --draft=false --latest

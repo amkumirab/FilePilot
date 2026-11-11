@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.1 - 2026-11-11
+
+### Added
+- Standalone Windows x64 executable with an offline guide, sample rules,
+  application and third-party licenses, version information, and build metadata.
+- ZIP checksums and tests of the actual extracted executable with a minimal PATH.
+- Automated tag releases that verify the source commit and downloaded draft
+  assets before publication.
+
+### Changed
+- Extend CI with a Windows executable build and smoke tests.
+- Expand verification to 128 tests, including release archive and version checks.
+
 ## 0.2.0 - 2026-11-10
 
 ### Added

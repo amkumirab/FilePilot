@@ -68,6 +68,12 @@ jobs:
           cache-dependency-path: requirements-build.txt
       - name: Install pinned Windows build tools
         run: python -m pip install -r requirements-build.txt
+      - name: Audit the pinned build environment
+        run: |
+          python -m venv .venv-audit
+          .\.venv-audit\Scripts\python.exe -m pip install pip-audit==2.10.1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          .\.venv-audit\Scripts\python.exe -m pip_audit --no-deps --disable-pip -r requirements-build.txt
       - name: Build portable release
         run: python scripts/build_windows.py
       - name: Test the executable extracted from its ZIP
