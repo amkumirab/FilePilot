@@ -1,0 +1,32 @@
+FilePilot @VERSION@ | Windows x64
+
+Extract the ZIP, open PowerShell in this folder, and run:
+
+    .\FilePilot.exe --help
+    .\FilePilot.exe scan "$env:USERPROFILE\Downloads"
+    .\FilePilot.exe organize "$env:USERPROFILE\Downloads" --apply
+    .\FilePilot.exe history "$env:USERPROFILE\Downloads"
+    .\FilePilot.exe undo "$env:USERPROFILE\Downloads" --apply
+
+Continuous preview:
+
+    .\FilePilot.exe watch "$env:USERPROFILE\Downloads"
+
+Add --apply to move stable files. Press Ctrl+C to stop watching before undoing.
+Each watch batch has its own history entry. Keep the .filepilot directory in the
+organized folder so moves remain recoverable. Edited files and occupied original
+paths are left alone during undo.
+
+Use the included rules only when you choose them explicitly:
+
+    .\FilePilot.exe scan "C:\path\to\folder" --config .\filepilot.toml
+
+Python is included in FilePilot.exe; no Python installation is needed. This is a
+console application. Keep the ZIP contents together for the guide and sample
+rules, although the executable can run independently.
+
+The executable is not code-signed. SHA256SUMS.txt on the release page verifies
+the downloaded ZIP's integrity; a checksum is not a publisher signature.
+
+Download and documentation: https://github.com/amkumirab/FilePilot/releases/latest
+Source and issue tracker: https://github.com/amkumirab/FilePilot

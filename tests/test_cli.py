@@ -126,7 +126,7 @@ class CliTests(unittest.TestCase):
     def test_version_flag(self):
         result = self.command("--version")
         self.assertEqual(result.returncode, 0)
-        self.assertEqual(result.stdout.strip(), "FilePilot 0.2.0")
+        self.assertEqual(result.stdout.strip(), "FilePilot 0.2.1")
 
     def test_custom_rules_round_trip_from_cli(self):
         source = self.root / "INVOICE.pdf"
