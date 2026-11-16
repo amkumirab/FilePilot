@@ -1,16 +1,12 @@
-# Folder watching
+# Saved execution plans
 
-Add a foreground polling watcher without runtime dependencies. Reuse the existing
-planner, journal, collision handling, and undo. Keep existing commands compatible.
+Contract: [SPEC-saved-plans.md](../SPEC-saved-plans.md).
 
-1. Track file identity, size, and modification metadata across polls. Wait for a
-   quiet interval, reset on changes, and filter the planner to stable files.
-2. Execute stable batches through the existing engine. Deduplicate previews,
-   bound retries, and coordinate applying watchers with a separate OS lock.
-3. Expose `watch`, timing flags, bounded runs, JSON Lines, and graceful Ctrl+C.
-4. Document the command, provide an isolated live demo, build the package, and
-   verify local tests and the existing Windows/Ubuntu CI matrix.
+1. Persist content fingerprints and validate the versioned plan schema. Test
+   serialization, malformed input, path conflicts, and whole-batch preflight.
+2. Execute reviewed plans under the existing lock and expose `plan` / `apply`.
+   Test previews, changed files, exact destinations, recovery, and existing CLI.
+3. Document the workflow, extend the native executable smoke test, and verify
+   source tests, lint, wheel/sdist, installed package, Windows binary, and CI.
 
-Each implementation slice includes tests. Verify incomplete downloads, file
-changes between polling and planning, disappeared/replaced roots, failed moves,
-journal failures, duplicate watchers, and restoration after stopping the watcher.
+Each slice keeps its implementation and tests together in a focused commit.

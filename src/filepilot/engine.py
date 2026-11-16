@@ -10,7 +10,7 @@ from .journal import history, load_run, locked, save_run
 from .paths import FilePilotError, root_directory, safe_path
 from .planner import Move, Plan
 
-__all__ = ["execute", "history", "load_run", "preview_undo", "undo"]
+__all__ = ["execute", "history", "load_run", "preview_undo", "undo", "validate_plan"]
 
 
 def _digest(path: Path) -> str:
@@ -40,6 +40,42 @@ def _unchanged(source: Path, move: Move) -> None:
     info = source.stat()
     if not source.is_file() or (info.st_size, info.st_mtime_ns) != (move.size, move.modified_ns):
         raise FilePilotError(f"File changed since preview: {move.source}")
+
+
+def _available_target(root: Path, relative: str) -> None:
+    safe_path(root, relative)
+    parent = root
+    parts = relative.split("/")
+    for index, part in enumerate(parts):
+        existing = next(
+            (child for child in parent.iterdir() if child.name.casefold() == part.casefold()),
+            None,
+        )
+        if existing is None:
+            return  # The rest of this path does not exist yet.
+        if index == len(parts) - 1 or not existing.is_dir():
+            raise FilePilotError(f"Planned destination is occupied: {relative}")
+        if existing.name != part:
+            raise FilePilotError(f"Destination directory spelling changed: {relative}")
+        parent = existing
+
+
+def validate_plan(plan: Plan, hashes: tuple[str, ...] | None = None) -> tuple[str, ...]:
+    """Read-only batch preflight, or capture hashes when saving a new plan."""
+    root = root_directory(plan.root)
+    if hashes is not None and len(hashes) != len(plan.moves):
+        raise FilePilotError("The plan has an invalid number of file hashes.")
+    observed = []
+    for index, move in enumerate(plan.moves):
+        source = safe_path(root, move.source)
+        _unchanged(source, move)
+        digest = _digest(source)
+        _unchanged(source, move)
+        if hashes is not None and digest != hashes[index]:
+            raise FilePilotError(f"File content changed since planning: {move.source}")
+        _available_target(root, move.target)
+        observed.append(digest)
+    return tuple(observed)
 
 
 def execute(plan: Plan) -> dict:

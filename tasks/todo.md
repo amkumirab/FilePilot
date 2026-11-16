@@ -1,8 +1,5 @@
-# Folder watching tasks
+# Saved-plan tasks
 
-- [x] Stable-file tracking and planner selection; deterministic clock tests.
-- [x] Journaled batches, retry limits, and watcher locking; failure-path tests.
-- [x] CLI flags, event output, and graceful shutdown; subprocess tests.
-- [x] Documentation, isolated demo, package build, and local verification.
-
-The published commit is verified by the Windows/Ubuntu matrix in GitHub Actions.
+- [x] Versioned persistence, strict schema, content fingerprints, batch preflight.
+- [ ] Locked execution, CLI preview/apply, journal/undo integration.
+- [ ] Documentation, package/native smoke tests, full validation and GitHub CI.
