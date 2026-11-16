@@ -5,6 +5,7 @@ import os
 import subprocess
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
@@ -58,6 +59,20 @@ class SavedPlanTests(unittest.TestCase):
             self.assertRaisesRegex(FilePilotError, "10 MiB"),
         ):
             self.snapshot()
+        self.assertFalse(self.output.exists())
+
+    def test_saving_rejects_case_aliased_sources_before_creating_an_unloadable_plan(self):
+        plan = build_plan(self.root)
+        move = plan.moves[0]
+        alias = self.root / "A.pdf"
+        alias.write_bytes(b"first")
+        os.utime(alias, ns=((self.root / "a.pdf").stat().st_atime_ns, move.modified_ns))
+        conflicting = replace(
+            plan,
+            moves=(move, replace(move, source="A.pdf", target="Documents/another.pdf")),
+        )
+        with self.assertRaisesRegex(FilePilotError, "duplicate"):
+            save_plan(conflicting, self.output)
         self.assertFalse(self.output.exists())
 
     def test_plan_cannot_be_written_over_a_source_target_or_history(self):

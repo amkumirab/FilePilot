@@ -54,7 +54,9 @@ def _check_location(plan: Plan, path: Path) -> None:
 def save_plan(plan: Plan, output: Path) -> SavedPlan:
     _check_location(plan, output)
     saved = SavedPlan(plan, validate_plan(plan))
-    content = (json.dumps(saved.to_dict(), ensure_ascii=True, indent=2) + "\n").encode("utf-8")
+    document = saved.to_dict()
+    _parse(document)  # Never write a snapshot that the strict reader would reject.
+    content = (json.dumps(document, ensure_ascii=True, indent=2) + "\n").encode("utf-8")
     if len(content) > MAX_PLAN_BYTES:
         raise FilePilotError("Saved plans must not exceed 10 MiB.")
     # Exclusive creation also rejects an existing symlink; never replace user data.
