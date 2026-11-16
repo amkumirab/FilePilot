@@ -7,9 +7,10 @@ from pathlib import Path
 
 from . import __version__
 from .config import DEFAULT_RULES, EXAMPLE_CONFIG, load_rules
-from .engine import execute, history, load_run, preview_undo, undo
+from .engine import execute, history, load_run, preview_undo, undo, validate_plan
 from .paths import FilePilotError
 from .planner import Plan, build_plan
+from .saved_plans import load_plan, save_plan
 from .watcher import WatchOptions, watch_folder
 
 
@@ -20,13 +21,14 @@ def _parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--version", action="version", version=f"FilePilot {__version__}")
     commands = parser.add_subparsers(dest="command", required=True)
-    for name in ("scan", "organize", "watch", "undo", "history"):
+    for name in ("scan", "organize", "watch", "plan", "undo", "history"):
         command = commands.add_parser(
             name,
             help={
                 "scan": "Preview file organization without changing anything.",
                 "organize": "Preview organization, or move files with --apply.",
                 "watch": "Watch for stable files; preview unless --apply is supplied.",
+                "plan": "Save exact moves and content hashes for later review and execution.",
                 "undo": "Preview restoration, or restore files with --apply.",
                 "history": "List saved runs for a folder.",
             }[name],
@@ -39,8 +41,12 @@ def _parser() -> argparse.ArgumentParser:
                 "Print JSON Lines events." if name == "watch" else "Print machine-readable JSON."
             ),
         )
-        if name in ("scan", "organize", "watch"):
+        if name in ("scan", "organize", "watch", "plan"):
             command.add_argument("--config", type=Path, help="Use custom TOML rules.")
+        if name == "plan":
+            command.add_argument(
+                "--output", type=Path, required=True, help="Create a new JSON plan."
+            )
         if name in ("organize", "undo", "watch"):
             command.add_argument("--apply", action="store_true", help="Actually move files.")
         if name == "undo":
@@ -60,6 +66,14 @@ def _parser() -> argparse.ArgumentParser:
                 type=int,
                 help="Stop after this many polls; otherwise run until Ctrl+C.",
             )
+    apply_saved = commands.add_parser(
+        "apply", help="Validate a saved plan; move only with --apply."
+    )
+    apply_saved.add_argument("plan", type=Path, help="Saved JSON plan to review or execute.")
+    apply_saved.add_argument(
+        "--apply", action="store_true", help="Actually move the planned files."
+    )
+    apply_saved.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
     initialize = commands.add_parser(
         "init", help="Write an example TOML config without overwriting."
     )
@@ -71,7 +85,7 @@ def _json(value) -> None:
     print(json.dumps(value, ensure_ascii=True, indent=2))
 
 
-def _print_plan(plan: Plan, *, as_json: bool) -> None:
+def _print_plan(plan: Plan, *, as_json: bool, saved: bool = False) -> None:
     if as_json:
         _json(plan.to_dict())
         return
@@ -81,7 +95,10 @@ def _print_plan(plan: Plan, *, as_json: bool) -> None:
         print(f"  {move.source!r} -> {move.target!r} [{move.rule!r}]")
     for skipped in plan.skipped:
         print(f"  SKIP {skipped.source!r}: {skipped.reason}")
-    print("No files changed. Use 'filepilot organize FOLDER --apply' with the same --config.")
+    if saved:
+        print("No files moved. Add --apply to execute this saved plan.")
+    else:
+        print("No files changed. Use 'filepilot organize FOLDER --apply' with the same --config.")
 
 
 def _print_run(run: dict, *, as_json: bool, restoring: bool = False) -> int:
@@ -130,6 +147,24 @@ def _dispatch(args: argparse.Namespace) -> int:
         with args.output.open("x", encoding="utf-8", newline="\n") as stream:
             stream.write(EXAMPLE_CONFIG)
         print(f"Created {args.output}. Use --config {args.output} with scan or organize.")
+    elif args.command == "plan":
+        rules = load_rules(args.config) if args.config else DEFAULT_RULES
+        exclude = (args.output, args.config) if args.config else (args.output,)
+        saved = save_plan(build_plan(args.folder, rules, exclude=exclude), args.output)
+        if args.json:
+            _json(saved.to_dict())
+        else:
+            print(f"Saved {len(saved.plan.moves)} move(s) to {str(args.output)!r}.")
+            print("Review the JSON, then use 'filepilot apply PLAN --apply'. No files moved.")
+    elif args.command == "apply":
+        saved = load_plan(args.plan)
+        if args.apply and saved.plan.moves:
+            return _print_run(execute(saved.plan, hashes=saved.hashes), as_json=args.json)
+        validate_plan(saved.plan, saved.hashes)
+        if args.json:
+            _json({**saved.to_dict(), "preview": True})
+        else:
+            _print_plan(saved.plan, as_json=False, saved=True)
     elif args.command == "watch":
         options = WatchOptions(
             interval=args.interval, settle=args.settle, max_cycles=args.max_cycles

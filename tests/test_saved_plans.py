@@ -2,6 +2,7 @@ import copy
 import hashlib
 import json
 import os
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -50,6 +51,14 @@ class SavedPlanTests(unittest.TestCase):
         with self.assertRaises(FileExistsError):
             save_plan(build_plan(self.root), self.output)
         self.assertEqual(self.output.read_bytes(), before)
+
+    def test_oversized_generated_plan_does_not_leave_an_output(self):
+        with (
+            patch("filepilot.saved_plans.MAX_PLAN_BYTES", 32),
+            self.assertRaisesRegex(FilePilotError, "10 MiB"),
+        ):
+            self.snapshot()
+        self.assertFalse(self.output.exists())
 
     def test_plan_cannot_be_written_over_a_source_target_or_history(self):
         plan = build_plan(self.root)
@@ -152,6 +161,15 @@ class SavedPlanTests(unittest.TestCase):
                 self.output.write_bytes(content if isinstance(content, bytes) else content.encode())
                 load_plan(self.output)
 
+    def test_nonregular_plan_inputs_are_rejected_before_reading(self):
+        with self.assertRaises(FilePilotError):
+            load_plan(self.root)
+        if os.name != "nt":
+            fifo = self.work / "plan.fifo"
+            os.mkfifo(fifo)
+            with self.assertRaises(FilePilotError):
+                load_plan(fifo)
+
     def test_relocated_or_missing_root_is_rejected(self):
         self.snapshot()
         original = json.loads(self.output.read_text())
@@ -192,6 +210,32 @@ class SavedPlanTests(unittest.TestCase):
         (self.root / "Documents/B.PDF").write_bytes(b"existing")
         with self.assertRaisesRegex(FilePilotError, "occupied"):
             validate_plan(saved.plan, saved.hashes)
+
+    def test_changed_directory_spelling_requires_a_new_plan(self):
+        saved = self.snapshot()
+        (self.root / "documents").mkdir()
+        with self.assertRaisesRegex(FilePilotError, "spelling changed"):
+            validate_plan(saved.plan, saved.hashes)
+
+    def test_destination_junction_or_symlink_is_rejected_before_moving(self):
+        saved = self.snapshot()
+        outside = self.work / "outside"
+        outside.mkdir()
+        link = self.root / "Documents"
+        if os.name == "nt":
+            result = subprocess.run(
+                ["cmd", "/c", "mklink", "/J", str(link), str(outside)],
+                capture_output=True,
+                timeout=10,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+        else:
+            link.symlink_to(outside, target_is_directory=True)
+        with self.assertRaisesRegex(FilePilotError, "links and junctions"):
+            load_plan(self.output)
+        with self.assertRaises(FilePilotError):
+            validate_plan(saved.plan, saved.hashes)
+        self.assertEqual(list(outside.iterdir()), [])
 
     def test_plan_location_cannot_be_a_destination_when_loading(self):
         self.snapshot()

@@ -78,7 +78,7 @@ def validate_plan(plan: Plan, hashes: tuple[str, ...] | None = None) -> tuple[st
     return tuple(observed)
 
 
-def execute(plan: Plan) -> dict:
+def execute(plan: Plan, *, hashes: tuple[str, ...] | None = None) -> dict:
     if not plan.moves:
         raise FilePilotError("Nothing to organize.")
     root = root_directory(plan.root)
@@ -101,13 +101,17 @@ def execute(plan: Plan) -> dict:
         ],
     }
     with locked(root):
+        if hashes is not None:
+            validate_plan(plan, hashes)
         save_run(root, run)
-        for move, entry in zip(plan.moves, run["entries"], strict=True):
+        for index, (move, entry) in enumerate(zip(plan.moves, run["entries"], strict=True)):
             try:
                 source, target = safe_path(root, move.source), safe_path(root, move.target)
                 _unchanged(source, move)
                 entry["sha256"] = _digest(source)
                 _unchanged(source, move)
+                if hashes is not None and entry["sha256"] != hashes[index]:
+                    raise FilePilotError(f"File content changed since planning: {move.source}")
                 target.parent.mkdir(parents=True, exist_ok=True)
                 safe_path(root, move.target)
             except (OSError, FilePilotError) as exc:

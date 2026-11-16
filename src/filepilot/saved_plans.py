@@ -130,7 +130,10 @@ def _parse(document) -> SavedPlan:
 
 
 def load_plan(path: Path) -> SavedPlan:
-    with path.expanduser().open("rb") as stream:
+    path = path.expanduser()
+    if not path.is_file():
+        raise FilePilotError(f"Not a regular saved-plan file: {path}")
+    with path.open("rb") as stream:
         content = stream.read(MAX_PLAN_BYTES + 1)
     if len(content) > MAX_PLAN_BYTES:
         raise FilePilotError("Saved plans must not exceed 10 MiB.")
