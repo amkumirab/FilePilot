@@ -1,25 +1,28 @@
 # FilePilot QA report
 
-Date: 2026-11-11. Version: 0.2.1. Local environment: Windows, CPython 3.12.10.
+Date: 2026-11-16. Version: 0.3.0. Local environment: Windows, CPython 3.12.10.
 
 ## Results
 
-- 128 unittest cases passed, with no skipped tests.
+- 161 unittest cases passed, with no skipped tests; 33 cover saved plans.
 - Ruff lint and formatting checks passed.
 - Coverage.py 7.17.2 measured the library and CLI subprocesses together:
-  641/651 executable lines (98.46%), 228/242 branches (94.21%), and 97.31%
+  795/805 executable lines (98.76%), 297/312 branches (95.19%), and 97.76%
   combined coverage. No lines were excluded from measurement.
-- The watcher module reached 100% line and branch coverage in the local run.
+- The watcher and saved-plan persistence modules reached 100% line and branch
+  coverage in the local run.
 - The standalone Windows executable was extracted from its ZIP and tested with
   Python-related environment variables removed and PATH limited to System32.
-  Both organization and live watching demos passed against the executable.
-- An existing 0.2.0 wheel installation created a run in a disposable folder;
-  the standalone 0.2.1 executable restored that run and retained the original bytes.
-- Pinned Windows build dependencies were audited with pip-audit; no known
+  Organization, live watching, saved-plan preview/apply/undo, and rejection of
+  same-size/same-timestamp content changes passed against the executable.
+- An existing 0.2.1 wheel installation created a run in a disposable folder;
+  the standalone 0.3.0 executable restored it. The 0.2.1 installation also undid
+  a 0.3.0 saved-plan run. Both directions retained the original bytes.
+- All seven pinned Windows build dependencies were audited with pip-audit; no known
   vulnerabilities were reported at the time of this check. This audit does not
   assess the bundled interpreter or replace a broader security review.
 - The wheel and source archive were built. The wheel was installed in an isolated
-  environment, where the full test suite and demo were run.
+  environment, where all 161 tests and both organization/watch demos passed.
 - The GitHub Actions workflow repeats tests, coverage, building, wheel install,
   and the demo on Windows and Ubuntu, using Python 3.12 and 3.13. Check the
   [Actions results](https://github.com/amkumirab/FilePilot/actions) for the exact
@@ -42,6 +45,8 @@ Date: 2026-11-11. Version: 0.2.1. Local environment: Windows, CPython 3.12.10.
 | CLI | All commands, help/version, JSON, human history, missing folders, invalid run IDs, exit codes 0/1/2/130 |
 | Watching | Stable metadata, replaced identities, changes during planning, duplicate previews, retries, root removal/replacement, read-only mode, named locks, JSON Lines, bounded runs, and interruption |
 | Release | Version/tag matching, archive contents, checksum changes, path traversal, symbolic links, clean-build provenance, source commit, notices, and missing resources |
+| Saved plans | Versioned round trip, exclusive output, strict JSON/schema/type/hash checks, size limits, Unicode, duplicate/conflicting paths, case aliases, and junction/symlink rejection |
+| Saved execution | Full preflight under lock, stale later entry prevents every move, metadata-preserving edits, exact recorded destinations, unchanged rules after saving, unrelated new files, late conflicts, interruption, and undo |
 
 ## Defects reproduced and fixed
 

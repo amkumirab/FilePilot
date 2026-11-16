@@ -12,7 +12,8 @@ environment installed from `requirements-build.txt`. Output is under
 `python scripts/verify_binary.py --exe PATH` runs the actual executable with
 Python-related environment variables removed and a minimal Windows system PATH.
 It uses disposable data and checks version, help, previews, collisions, Unicode
-names, organization, history, undo, custom rules, and folder watching.
+names, organization, history, undo, custom rules, saved plans, whole-batch refusal
+of metadata-preserving content changes, and folder watching.
 
 CI builds and tests the executable on every branch change. A `vX.Y.Z` tag invokes
 the same quality matrix and Windows job. The release job checks that the tag,

@@ -61,6 +61,25 @@ def exercise(executable: Path, work: Path, environment: dict[str, str], version:
     )
     for name, content in originals.items():
         require((inbox / name).read_bytes() == content, f"Content changed after undo: {name}")
+    plan_path = work / "reviewed plan.json"
+    saved = json.loads(run("plan", inbox, "--config", config, "--output", plan_path, "--json"))
+    require(saved["version"] == 1 and len(saved["moves"]) == 2, "Saved-plan creation failed")
+    require(json.loads(run("apply", plan_path, "--json"))["preview"], "Plan preview failed")
+    changed = inbox / "گزارش.csv"
+    info = changed.stat()
+    changed.write_bytes(b"A,B\n1,2\n")
+    os.utime(changed, ns=(info.st_atime_ns, info.st_mtime_ns))
+    run("apply", plan_path, "--apply", expected=2)
+    require(all((inbox / name).is_file() for name in originals), "Stale batch moved a file")
+    changed.write_bytes(originals[changed.name])
+    os.utime(changed, ns=(info.st_atime_ns, info.st_mtime_ns))
+    require(
+        json.loads(run("apply", plan_path, "--apply", "--json"))["status"] == "completed",
+        "Saved-plan execution failed",
+    )
+    run("undo", inbox, "--apply")
+    for name, content in originals.items():
+        require((inbox / name).read_bytes() == content, f"Saved-plan undo changed bytes: {name}")
     for script in ("demo.py", "watch_demo.py"):
         result = subprocess.run(
             [sys.executable, str(ROOT / "scripts" / script), "--executable", str(executable)],
@@ -77,7 +96,7 @@ def exercise(executable: Path, work: Path, environment: dict[str, str], version:
         print(result.stdout.strip())
     print(
         f"Standalone FilePilot {version}: Unicode paths, custom rules, history, undo, "
-        "collisions, previews, and live watching passed."
+        "collisions, previews, saved plans, stale-batch refusal, and live watching passed."
     )
 
 

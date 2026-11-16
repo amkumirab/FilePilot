@@ -23,6 +23,26 @@ exclusive `os.link` followed by source unlink; an ordinary unlink failure attemp
 to remove the newly created link. POSIX destinations must support hard links
 and be on the source filesystem. There is deliberately no overwrite/copy fallback.
 
+## Saved-plan execution
+
+`saved_plans.py` persists the planner's immutable moves with SHA-256 fingerprints
+in an independent version-1 format. Strict boundary validation rejects unknown
+fields, duplicate keys, unsafe/conflicting paths, and unsupported versions. Plans
+keep their canonical absolute root. A file size cap bounds JSON reads.
+
+`engine.validate_plan` checks the complete batch without writing state. Snapshot
+creation uses it to capture hashes; apply previews use it to validate those hashes.
+`engine.execute(plan, hashes=...)` runs it again inside the existing root lock,
+before writing a journal or moving a file. The ordinary execution path then
+compares each newly read content hash with the saved one. Existing journal formats,
+exclusive move operations, and recovery/undo states are shared by both modes.
+
+This avoids rebuilding destinations from potentially changed rules after review.
+Replanning and silently choosing a new collision suffix would execute a different
+batch from the one the user inspected. Full preflight prevents known stale later
+entries from causing earlier moves, but cannot make independent filesystem moves
+atomic against other programs. See [saved plans](saved-plans.md).
+
 ## State transitions
 
 Organization: `not_started -> pending -> moved` (or `failed`). The pending state,

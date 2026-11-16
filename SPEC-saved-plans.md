@@ -34,7 +34,8 @@ watch, journal, and undo behavior remains compatible. No runtime dependencies.
 
 Always validate disk input and preserve user bytes. Do not rebase plans, overwrite
 outputs, weaken checks, alter existing journal formats, or add a copy fallback.
-GUI, scheduling, recursive scans, cryptographic signing, and release publication
-are outside this feature. Follow existing unittest, Ruff, wheel/sdist, and native
+GUI, scheduling, recursive scans, cryptographic signing, and changes to release
+infrastructure are outside this feature. Package version 0.3.0 using the existing
+tagged Windows release pipeline. Follow unittest, Ruff, wheel/sdist, and native
 Windows smoke checks. Add tests for round trips, Unicode, stale later entries,
 same-size/same-time edits, schema abuse, collisions, links, previews, and undo.

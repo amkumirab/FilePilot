@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.0 - 2026-11-16
+
+### Added
+- Save exact reviewed moves with `plan --output`, then validate or execute them
+  using `apply`; previews remain read-only and execution requires `--apply`.
+- Versioned JSON plans with source hashes, strict schema/path validation,
+  exclusive creation, and bounded input size.
+- Whole-batch checks under the folder lock before any saved-plan move. Changed
+  sources or occupied destinations stop the batch without recording a run.
+- Recheck saved hashes at each move and reuse normal history/undo for recovery.
+- Source, CLI, and native Windows tests for saved plans and stale-batch refusal.
+
 ## 0.2.1 - 2026-11-11
 
 ### Added

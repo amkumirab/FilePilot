@@ -8,6 +8,17 @@ Extract the ZIP, open PowerShell in this folder, and run:
     .\FilePilot.exe history "$env:USERPROFILE\Downloads"
     .\FilePilot.exe undo "$env:USERPROFILE\Downloads" --apply
 
+Save, review, and execute an exact batch:
+
+    .\FilePilot.exe plan "C:\path\to\folder" --output reviewed-plan.json
+    .\FilePilot.exe apply reviewed-plan.json
+    .\FilePilot.exe apply reviewed-plan.json --apply
+
+Review root and moves in the JSON. Changed files or occupied destinations reject
+the batch before moving files. New unrelated files are ignored. Use a new output
+filename to replan; existing plan files are never overwritten. History and undo
+work for saved-plan runs too. Use a quiet folder; preflight is not a transaction.
+
 Continuous preview:
 
     .\FilePilot.exe watch "$env:USERPROFILE\Downloads"

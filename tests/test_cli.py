@@ -26,7 +26,7 @@ class CliTests(unittest.TestCase):
     def test_help_exposes_commands(self):
         result = self.command("--help")
         self.assertEqual(result.returncode, 0, result.stderr)
-        for command in ("scan", "organize", "watch", "undo", "history", "init"):
+        for command in ("scan", "organize", "watch", "plan", "apply", "undo", "history", "init"):
             self.assertIn(command, result.stdout)
 
     def test_full_cli_workflow_and_both_previews_are_read_only(self):
@@ -126,7 +126,7 @@ class CliTests(unittest.TestCase):
     def test_version_flag(self):
         result = self.command("--version")
         self.assertEqual(result.returncode, 0)
-        self.assertEqual(result.stdout.strip(), "FilePilot 0.2.1")
+        self.assertEqual(result.stdout.strip(), "FilePilot 0.3.0")
 
     def test_custom_rules_round_trip_from_cli(self):
         source = self.root / "INVOICE.pdf"
