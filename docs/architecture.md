@@ -23,6 +23,23 @@ exclusive `os.link` followed by source unlink; an ordinary unlink failure attemp
 to remove the newly created link. POSIX destinations must support hard links
 and be on the source filesystem. There is deliberately no overwrite/copy fallback.
 
+## Duplicate detection
+
+`duplicates.py` owns its read-only report types, selection, and comparison. It
+reuses path guards and the planner's temporary-file suffixes but does not invoke
+the engine or journal. Device/inode identities coalesce hard links, then size
+buckets avoid content reads for unique sizes. Only matching size/hash groups of
+independent files are reported. A streaming reader bounds each read and total
+bytes, checks the opened descriptor as well as the path, and closes handles on
+every exit. A final metadata pass removes invalidated candidates.
+
+Per-file failures remain in a partial report, distinct from global root/listing
+errors. No write lock is taken: this is an observation, not a destructive action.
+Logical duplicate bytes intentionally do not claim allocated space recovery.
+The bounded reader is separate from the engine's digest helper because it must
+handle actively changing files without following their growth. See
+[the duplicate report contract](duplicates.md).
+
 ## Saved-plan execution
 
 `saved_plans.py` persists the planner's immutable moves with SHA-256 fingerprints

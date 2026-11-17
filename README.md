@@ -4,6 +4,7 @@
 
 FilePilot sorts files into folders using built-in categories or custom TOML rules.
 It shows a preview before moving anything and keeps a history for undoing moves.
+It also reports duplicate file content without moving or deleting files.
 The `watch` command processes new files after their metadata has stayed unchanged
 for a configurable interval.
 
@@ -25,6 +26,8 @@ No files changed.
 - **Read-only previews.** Both organization and undo require `--apply` to move files.
 - **Saved plans.** Review exact destinations in a JSON file, then apply them only
   after checking all source hashes and destination paths.
+- **Duplicate reports.** Group same-size, same-SHA-256 files; hash only repeated
+  sizes and keep hard-link aliases out of the logical byte totals.
 - **Ordered rules.** Match extensions and optional filename text; the first match wins.
 - **Date folders and renaming.** Use the file's modification date in templates.
 - **Collision handling.** Existing and planned names get numbered alternatives,
@@ -121,6 +124,23 @@ lock file but records no run when validation fails. Changes by other apps after
 preflight can still cause a journaled partial run; `undo` remains available.
 See [saved-plan format, checks, and limits](docs/saved-plans.md).
 
+## Find duplicate files
+
+```bash
+filepilot duplicates ./inbox
+filepilot duplicates ./inbox --json
+```
+
+This read-only command checks immediate regular files of any extension. It groups
+by size before streaming SHA-256 reads, reports matching names and redundant logical
+bytes, and creates no history or state. Hidden/internal files, incomplete downloads,
+directories, and links are skipped. Hard-link aliases are counted once when their
+filesystem identity is available. Logical bytes are not a disk-space guarantee.
+
+Unreadable or detectably changed files are excluded with error details and exit
+code `1`; other results remain available. `--json` includes `groups`, `summary`,
+`skipped`, and `errors`. See [report fields and limits](docs/duplicates.md).
+
 ## Watch a folder
 
 ```bash
@@ -204,12 +224,15 @@ filepilot scan ./inbox --json
 filepilot organize ./inbox --apply --json
 filepilot history ./inbox --json
 filepilot undo ./inbox --json
+filepilot duplicates ./inbox --json
 ```
 
 Exit codes: `0` success or preview, `1` a run with failed/blocked entries,
 `2` an input or filesystem error, `130` interruption. Read-only undo previews
 return `0` even when some moves are blocked; inspect their per-file `status`.
-Filesystem/input error messages go to stderr even with `--json`.
+Global filesystem/input errors go to stderr even with `--json`. Duplicate scans
+include per-file failures in their JSON `errors` array and return `1` for a partial
+report; a completed report, including one without duplicates, returns `0`.
 
 ## Safety and limits
 

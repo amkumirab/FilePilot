@@ -1,28 +1,31 @@
 # FilePilot QA report
 
-Date: 2026-11-16. Version: 0.3.0. Local environment: Windows, CPython 3.12.10.
+Date: 2026-11-17. Version: 0.4.0. Local environment: Windows, CPython 3.12.10.
 
 ## Results
 
-- 161 unittest cases passed, with no skipped tests; 33 cover saved plans.
+- 194 unittest cases passed, with no skipped tests; 33 cover duplicate detection
+  and 33 cover saved plans.
 - Ruff lint and formatting checks passed.
 - Coverage.py 7.17.2 measured the library and CLI subprocesses together:
-  795/805 executable lines (98.76%), 297/312 branches (95.19%), and 97.76%
+  940/950 executable lines (98.95%), 345/360 branches (95.83%), and 98.09%
   combined coverage. No lines were excluded from measurement.
-- The watcher and saved-plan persistence modules reached 100% line and branch
-  coverage in the local run.
+- The duplicate scanner, watcher, and saved-plan persistence modules reached
+  100% line and branch coverage in the local run.
 - The standalone Windows executable was extracted from its ZIP and tested with
   Python-related environment variables removed and PATH limited to System32.
   Organization, live watching, saved-plan preview/apply/undo, and rejection of
   same-size/same-timestamp content changes passed against the executable.
-- An existing 0.2.1 wheel installation created a run in a disposable folder;
+  Duplicate JSON/human reports, size-first hashing, empty files, hard-link aliases,
+  and unchanged source bytes/timestamps were checked against the executable too.
+- Previously verified journal compatibility: a 0.2.1 wheel created a disposable run;
   the standalone 0.3.0 executable restored it. The 0.2.1 installation also undid
   a 0.3.0 saved-plan run. Both directions retained the original bytes.
 - All seven pinned Windows build dependencies were audited with pip-audit; no known
   vulnerabilities were reported at the time of this check. This audit does not
   assess the bundled interpreter or replace a broader security review.
 - The wheel and source archive were built. The wheel was installed in an isolated
-  environment, where all 161 tests and both organization/watch demos passed.
+  environment, where all 194 tests and both organization/watch demos passed.
 - The GitHub Actions workflow repeats tests, coverage, building, wheel install,
   and the demo on Windows and Ubuntu, using Python 3.12 and 3.13. Check the
   [Actions results](https://github.com/amkumirab/FilePilot/actions) for the exact
@@ -47,6 +50,8 @@ Date: 2026-11-16. Version: 0.3.0. Local environment: Windows, CPython 3.12.10.
 | Release | Version/tag matching, archive contents, checksum changes, path traversal, symbolic links, clean-build provenance, source commit, notices, and missing resources |
 | Saved plans | Versioned round trip, exclusive output, strict JSON/schema/type/hash checks, size limits, Unicode, duplicate/conflicting paths, case aliases, and junction/symlink rejection |
 | Saved execution | Full preflight under lock, stale later entry prevents every move, metadata-preserving edits, exact recorded destinations, unchanged rules after saving, unrelated new files, late conflicts, interruption, and undo |
+| Duplicates | Different names/extensions, same-size different bytes, empty files, size-first filtering, bounded chunk/total reads, hard links, missing identities, deterministic ordering, and skipped special files |
+| Duplicate failures | Files changed during/after hashing, replacements, removed files, native Windows sharing denial, POSIX open handles, invalid root/listing, root replacement, partial JSON/exit 1, read-only Ctrl+C/exit 130, and closed reader handles |
 
 ## Defects reproduced and fixed
 
@@ -58,6 +63,11 @@ Date: 2026-11-16. Version: 0.3.0. Local environment: Windows, CPython 3.12.10.
    persistent failure preserves the previous journal and stops execution.
 3. Out-of-range timestamps could escape as raw date-conversion exceptions.
    These now produce a FilePilotError before any files are moved.
+4. Duplicate scanner tests reproduced differing Windows `st_ctime_ns` values
+   between path and handle queries on Python 3.12. The scanner now uses Windows
+   birth time for identity metadata and retains POSIX change-time checks. A
+   deterministic regression test covers the distinction, without relaxing size,
+   file identity, modification-time, or content comparison.
 
 ## Limits
 

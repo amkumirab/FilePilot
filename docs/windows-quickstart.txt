@@ -8,6 +8,17 @@ Extract the ZIP, open PowerShell in this folder, and run:
     .\FilePilot.exe history "$env:USERPROFILE\Downloads"
     .\FilePilot.exe undo "$env:USERPROFILE\Downloads" --apply
 
+Report duplicate content without moving or deleting anything:
+
+    .\FilePilot.exe duplicates "$env:USERPROFILE\Downloads"
+    .\FilePilot.exe duplicates "$env:USERPROFILE\Downloads" --json
+
+Only immediate files are scanned. Matching content is reported by size and SHA-256.
+Hidden/internal files, temporary downloads, directories, and links are skipped.
+Hard-link aliases count once when identity is available. Logical duplicate bytes
+do not guarantee recoverable disk space. A partial report returns exit code 1 and
+includes file errors. Keep report output outside the scanned folder.
+
 Save, review, and execute an exact batch:
 
     .\FilePilot.exe plan "C:\path\to\folder" --output reviewed-plan.json

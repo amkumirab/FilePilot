@@ -17,7 +17,7 @@ from .watcher import WatchOptions, watch_folder
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="FilePilot: preview, organize, and undo file moves.",
+        description="FilePilot: preview, organize, find duplicates, and undo file moves.",
         epilog="Only immediate files are scanned. Moves require --apply.",
     )
     parser.add_argument("--version", action="version", version=f"FilePilot {__version__}")

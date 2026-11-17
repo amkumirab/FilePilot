@@ -80,6 +80,37 @@ def exercise(executable: Path, work: Path, environment: dict[str, str], version:
     run("undo", inbox, "--apply")
     for name, content in originals.items():
         require((inbox / name).read_bytes() == content, f"Saved-plan undo changed bytes: {name}")
+    duplicates = work / "duplicates با فاصله"
+    duplicates.mkdir()
+    samples = {
+        "a.txt": b"same",
+        "نسخه.bin": b"same",
+        "different.xyz": b"diff",
+        "empty-a": b"",
+        "empty-b": b"",
+        "unique": b"unique-size",
+        "download.PART": b"same",
+    }
+    for name, content in samples.items():
+        (duplicates / name).write_bytes(content)
+    os.link(duplicates / "a.txt", duplicates / "alias.txt")
+    before = {
+        path.name: (path.read_bytes(), path.stat().st_mtime_ns) for path in duplicates.iterdir()
+    }
+    duplicate_report = json.loads(run("duplicates", duplicates, "--json"))
+    require(duplicate_report["summary"]["duplicate_groups"] == 2, "Wrong duplicate groups")
+    require(duplicate_report["summary"]["duplicate_files"] == 2, "Hard links inflated copies")
+    require(duplicate_report["summary"]["redundant_bytes"] == 4, "Wrong logical duplicate bytes")
+    require(duplicate_report["summary"]["hashed_files"] == 5, "Size-first hashing failed")
+    require(not duplicate_report["errors"], "Duplicate scan reported file errors")
+    require("Read-only" in run("duplicates", duplicates), "Human duplicate report failed")
+    run("duplicates", duplicates, "--apply", expected=2)
+    after = {
+        path.name: (path.read_bytes(), path.stat().st_mtime_ns) for path in duplicates.iterdir()
+    }
+    require(
+        before == after and not (duplicates / ".filepilot").exists(), "Duplicate scan wrote data"
+    )
     for script in ("demo.py", "watch_demo.py"):
         result = subprocess.run(
             [sys.executable, str(ROOT / "scripts" / script), "--executable", str(executable)],
@@ -96,7 +127,8 @@ def exercise(executable: Path, work: Path, environment: dict[str, str], version:
         print(result.stdout.strip())
     print(
         f"Standalone FilePilot {version}: Unicode paths, custom rules, history, undo, "
-        "collisions, previews, saved plans, stale-batch refusal, and live watching passed."
+        "collisions, previews, saved plans, duplicates, stale-batch refusal, "
+        "and live watching passed."
     )
 
 

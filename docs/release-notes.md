@@ -1,22 +1,21 @@
-# FilePilot 0.3.0
+# FilePilot 0.4.0
 
-Save a reviewed batch and apply its exact recorded destinations later:
+Report duplicate file content without moving or deleting files:
 
 ```powershell
-.\FilePilot.exe plan "$env:USERPROFILE\Downloads" --output reviewed-plan.json
-.\FilePilot.exe apply reviewed-plan.json
-.\FilePilot.exe apply reviewed-plan.json --apply
+.\FilePilot.exe duplicates "$env:USERPROFILE\Downloads"
+.\FilePilot.exe duplicates "$env:USERPROFILE\Downloads" --json
 ```
 
-The first command creates a new JSON file with source content hashes. Review its
-root and moves before applying it. All files and destinations are checked under
-the folder lock before the first move. Changed files, occupied destinations, or
-unsafe paths reject the batch. New unrelated files stay in place. Runs use the
-existing history and undo commands. Concurrent edits after preflight can still
-cause a recoverable partial run; use a quiet folder.
+The scanner groups immediate regular files by size before calculating SHA-256
+in bounded chunks. It reports matching filenames, extra copies, and logical
+duplicate bytes. Hard-link aliases count once when identity is available.
+Directories, hidden/internal files, incomplete downloads, and links are skipped.
 
-Plans are unsigned local data and are limited to 10 MiB. Existing plan files are
-never overwritten. Create a new plan after a stale-plan error.
+Unreadable or detectably changing files produce a partial report with exit 1;
+JSON includes their errors. Use a quiet folder: a report is a point-in-time
+observation, and logical bytes are not a disk-space recovery guarantee.
+Existing organization, watch, saved-plan, history, and undo commands remain available.
 
 The Windows x64 ZIP contains a standalone `FilePilot.exe`. Python is included;
 no separate Python installation is required.

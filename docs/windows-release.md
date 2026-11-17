@@ -13,7 +13,8 @@ environment installed from `requirements-build.txt`. Output is under
 Python-related environment variables removed and a minimal Windows system PATH.
 It uses disposable data and checks version, help, previews, collisions, Unicode
 names, organization, history, undo, custom rules, saved plans, whole-batch refusal
-of metadata-preserving content changes, and folder watching.
+of metadata-preserving content changes, duplicate reports with hard-link aliases,
+empty files and unchanged originals, and folder watching.
 
 CI builds and tests the executable on every branch change. A `vX.Y.Z` tag invokes
 the same quality matrix and Windows job. The release job checks that the tag,

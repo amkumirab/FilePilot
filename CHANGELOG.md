@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.0 - 2026-11-17
+
+### Added
+- Read-only `duplicates FOLDER [--json]` reports of same-size, same-SHA-256 files.
+- Size-first filtering and bounded streaming reads, with hard-link alias handling
+  and logical duplicate byte totals.
+- Per-file errors and exit 1 for partial reports; file identity/metadata checks
+  during reading and again before reporting, plus root replacement detection.
+- Source, subprocess, native file-sharing, and Windows executable verification
+  for duplicate groups, changing files, read errors, and unchanged originals.
+
 ## 0.3.0 - 2026-11-16
 
 ### Added
