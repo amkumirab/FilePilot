@@ -7,6 +7,7 @@ from pathlib import Path
 
 from . import __version__
 from .config import DEFAULT_RULES, EXAMPLE_CONFIG, load_rules
+from .duplicates import DuplicateReport, find_duplicates
 from .engine import execute, history, load_run, preview_undo, undo, validate_plan
 from .paths import FilePilotError
 from .planner import Plan, build_plan
@@ -21,7 +22,7 @@ def _parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--version", action="version", version=f"FilePilot {__version__}")
     commands = parser.add_subparsers(dest="command", required=True)
-    for name in ("scan", "organize", "watch", "plan", "undo", "history"):
+    for name in ("scan", "organize", "watch", "plan", "duplicates", "undo", "history"):
         command = commands.add_parser(
             name,
             help={
@@ -29,11 +30,12 @@ def _parser() -> argparse.ArgumentParser:
                 "organize": "Preview organization, or move files with --apply.",
                 "watch": "Watch for stable files; preview unless --apply is supplied.",
                 "plan": "Save exact moves and content hashes for later review and execution.",
+                "duplicates": "Report same-size, same-SHA-256 files without changing them.",
                 "undo": "Preview restoration, or restore files with --apply.",
                 "history": "List saved runs for a folder.",
             }[name],
         )
-        command.add_argument("folder", type=Path, help="Folder to organize (not recursive).")
+        command.add_argument("folder", type=Path, help="Folder to inspect (not recursive).")
         command.add_argument(
             "--json",
             action="store_true",
@@ -116,6 +118,34 @@ def _print_run(run: dict, *, as_json: bool, restoring: bool = False) -> int:
     return 1 if run["status"] in {"partial", "undo_partial"} else 0
 
 
+def _print_duplicates(report: DuplicateReport, *, as_json: bool) -> int:
+    document = report.to_dict()
+    if as_json:
+        _json(document)
+    else:
+        summary = document["summary"]
+        print(f"FilePilot duplicates | {report.root}")
+        print(
+            f"{summary['duplicate_groups']} group(s) | {summary['duplicate_files']} extra file(s)"
+            f" | {summary['redundant_bytes']} redundant logical bytes"
+        )
+        for group in report.groups:
+            print(f"SHA-256: {group.sha256} | {group.size} bytes each")
+            for name in group.files:
+                print(f"  {name!r}")
+        if not report.groups:
+            print("No duplicate file groups found among the successfully checked files.")
+        print(f"Scanned: {report.scanned_files} | Hashed: {report.hashed_files}")
+        for entry in report.skipped:
+            print(f"  SKIP {entry.source!r}: {entry.reason}")
+        if report.errors:
+            print(f"Scan incomplete: {len(report.errors)} file error(s); see stderr.")
+        for entry in report.errors:
+            print(f"  ERROR {entry.source!r}: {entry.message}", file=sys.stderr)
+        print("Read-only report. No files moved or deleted.")
+    return 1 if report.errors else 0
+
+
 def _print_watch_event(event: dict, *, as_json: bool) -> None:
     if as_json:
         print(json.dumps(event, ensure_ascii=True), flush=True)
@@ -147,6 +177,8 @@ def _dispatch(args: argparse.Namespace) -> int:
         with args.output.open("x", encoding="utf-8", newline="\n") as stream:
             stream.write(EXAMPLE_CONFIG)
         print(f"Created {args.output}. Use --config {args.output} with scan or organize.")
+    elif args.command == "duplicates":
+        return _print_duplicates(find_duplicates(args.folder), as_json=args.json)
     elif args.command == "plan":
         rules = load_rules(args.config) if args.config else DEFAULT_RULES
         exclude = (args.output, args.config) if args.config else (args.output,)
@@ -221,5 +253,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Error: {exc}", file=sys.stderr)
         return 2
     except KeyboardInterrupt:
-        print("Interrupted. Check history and use undo to recover saved moves.", file=sys.stderr)
+        if args.command == "duplicates":
+            print("Interrupted. No files were moved or deleted.", file=sys.stderr)
+        else:
+            print(
+                "Interrupted. Check history and use undo to recover saved moves.", file=sys.stderr
+            )
         return 130

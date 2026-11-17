@@ -203,6 +203,41 @@ class DuplicateChangeTests(unittest.TestCase):
         if os.name != "nt":
             self.assertEqual(report.skipped[0].reason, "directory or non-regular file")
 
+    def test_native_file_sharing_errors_preserve_healthy_groups_and_originals(self):
+        path = self.root / "locked"
+        path.write_bytes(b"same")
+        if os.name == "nt":
+            import ctypes
+            from ctypes import wintypes
+
+            kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+            kernel.CreateFileW.argtypes = [
+                wintypes.LPCWSTR,
+                wintypes.DWORD,
+                wintypes.DWORD,
+                wintypes.LPVOID,
+                wintypes.DWORD,
+                wintypes.DWORD,
+                wintypes.HANDLE,
+            ]
+            kernel.CreateFileW.restype = wintypes.HANDLE
+            kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+            kernel.CloseHandle.restype = wintypes.BOOL
+            handle = kernel.CreateFileW(str(path), 0x80000000, 0, None, 3, 128, None)
+            self.assertNotEqual(handle, ctypes.c_void_p(-1).value, ctypes.get_last_error())
+            try:
+                report = find_duplicates(self.root)
+            finally:
+                self.assertTrue(kernel.CloseHandle(handle))
+            self.assertEqual(report.groups[0].files, ("a", "b"))
+            self.assertEqual(report.errors[0].source, "locked")
+        else:
+            with path.open("rb"):
+                report = find_duplicates(self.root)
+            self.assertEqual(report.groups[0].files, ("a", "b", "locked"))
+            self.assertEqual(report.errors, ())
+        self.assertEqual(path.read_bytes(), b"same")
+
 
 if __name__ == "__main__":
     unittest.main()
