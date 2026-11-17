@@ -1,12 +1,12 @@
-# Saved execution plans
+# Duplicate detection
 
-Contract: [SPEC-saved-plans.md](../SPEC-saved-plans.md).
+Contract: [SPEC-duplicates.md](../SPEC-duplicates.md).
 
-1. Persist content fingerprints and validate the versioned plan schema. Test
-   serialization, malformed input, path conflicts, and whole-batch preflight.
-2. Execute reviewed plans under the existing lock and expose `plan` / `apply`.
-   Test previews, changed files, exact destinations, recovery, and existing CLI.
-3. Document the workflow, extend the native executable smoke test, and verify
-   source tests, lint, wheel/sdist, installed package, Windows binary, and CI.
+1. Implement deterministic, size-first streaming detection and a versioned report.
+   Test real content, large files, errors, changing files, filters, and hard links.
+2. Expose the read-only `duplicates` command with human/JSON output and exit codes.
+   Exercise it through subprocesses and preserve existing CLI contracts.
+3. Document the report and its limits, extend native executable smoke checks, and
+   verify packages, source coverage, Windows binary, dependency audit, and CI.
 
 Each slice keeps its implementation and tests together in a focused commit.

@@ -1,9 +1,8 @@
-# Saved-plan tasks
+# Duplicate-detection tasks
 
-- [x] Versioned persistence, strict schema, content fingerprints, batch preflight.
-- [x] Locked execution, CLI preview/apply, journal/undo integration.
-- [x] Documentation, 161 tests, source coverage, isolated wheel, native Windows
-      smoke, journal compatibility, and pinned build dependency audit.
+- [x] Size-first streaming scan, report, filtering, hard links, and change checks.
+- [ ] Read-only CLI, JSON/human output, partial errors, and subprocess tests.
+- [ ] Documentation, source/wheel/native checks, audit, and GitHub validation.
 
 The final commit also runs through the GitHub Windows/Ubuntu matrix and native
 Windows job before tagged publication and handoff.
