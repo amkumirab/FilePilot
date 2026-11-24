@@ -129,15 +129,17 @@ See [saved-plan format, checks, and limits](docs/saved-plans.md).
 ```bash
 filepilot duplicates ./inbox
 filepilot duplicates ./inbox --json
+filepilot duplicates ./inbox --recursive --json
 ```
 
-This read-only command checks immediate regular files of any extension. It groups
-by size before streaming SHA-256 reads, reports matching names and redundant logical
-bytes, and creates no history or state. Hidden/internal files, incomplete downloads,
-directories, and links are skipped. Hard-link aliases are counted once when their
+This read-only command checks immediate regular files of any extension. Use
+`--recursive` to find matches across subfolders. Reports show paths relative to
+the scan root. The command groups by size before streaming SHA-256 reads and
+reports matching paths and redundant logical bytes. Hidden/internal entries,
+incomplete downloads, and links are skipped. Hard-link aliases are counted once when their
 filesystem identity is available. Logical bytes are not a disk-space guarantee.
 
-Unreadable or detectably changed files are excluded with error details and exit
+Unreadable subfolders and unreadable or detectably changed files are reported with exit
 code `1`; other results remain available. `--json` includes `groups`, `summary`,
 `skipped`, and `errors`. See [report fields and limits](docs/duplicates.md).
 

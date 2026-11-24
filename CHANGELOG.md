@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Use `duplicates --recursive` to find matching files across subfolders.
+  Reports use paths relative to the scan root and retain results when a subfolder
+  cannot be read.
+
 ## 0.4.0 - 2026-11-17
 
 ### Added

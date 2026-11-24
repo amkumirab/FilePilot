@@ -111,37 +111,51 @@ def _hash_file(root: Path, candidate: _Candidate) -> str:
     return digest.hexdigest()
 
 
-def find_duplicates(folder: Path) -> DuplicateReport:
+def _name_order(name: str) -> tuple[str, str]:
+    return name.casefold(), name
+
+
+def _pending_entries(folder: Path) -> list[Path]:
+    return sorted(folder.iterdir(), key=lambda path: _name_order(path.name), reverse=True)
+
+
+def find_duplicates(folder: Path, *, recursive: bool = False) -> DuplicateReport:
     root = root_directory(folder)
     info = root.stat()
     root_id = info.st_dev, info.st_ino
     buckets: dict[int, list[_Candidate]] = defaultdict(list)
     identities: dict[tuple[int, int], str] = {}
     skipped, errors = [], []
-    for source in sorted(root.iterdir(), key=lambda path: (path.name.casefold(), path.name)):
+    pending = _pending_entries(root)
+    while pending:
+        source = pending.pop()
+        relative = source.relative_to(root).as_posix()
         try:
             if is_link(source):
-                skipped.append(Skip(source.name, "link or junction"))
+                skipped.append(Skip(relative, "link or junction"))
                 continue
             if is_hidden(source):
-                skipped.append(Skip(source.name, "hidden or internal"))
+                skipped.append(Skip(relative, "hidden or internal"))
                 continue
             info = source.stat(follow_symlinks=False)
+            if recursive and stat.S_ISDIR(info.st_mode):
+                pending.extend(_pending_entries(safe_path(root, relative)))
+                continue
             if not stat.S_ISREG(info.st_mode):
-                skipped.append(Skip(source.name, "directory or non-regular file"))
+                skipped.append(Skip(relative, "directory or non-regular file"))
                 continue
             if source.suffix.casefold() in INCOMPLETE:
-                skipped.append(Skip(source.name, "incomplete download or temporary file"))
+                skipped.append(Skip(relative, "incomplete download or temporary file"))
                 continue
-            safe_path(root, source.name)
+            safe_path(root, relative)
             identity = info.st_dev, info.st_ino
             if info.st_ino and identity in identities:
-                skipped.append(Skip(source.name, f"hard-link alias of {identities[identity]!r}"))
+                skipped.append(Skip(relative, f"hard-link alias of {identities[identity]!r}"))
                 continue
-            identities[identity] = source.name
-            buckets[info.st_size].append(_Candidate(source.name, info))
+            identities[identity] = relative
+            buckets[info.st_size].append(_Candidate(relative, info))
         except (OSError, FilePilotError) as exc:
-            errors.append(ScanError(source.name, str(exc)))
+            errors.append(ScanError(relative, str(exc)))
     hashed = []
     for candidates in buckets.values():
         if len(candidates) < 2:
@@ -163,12 +177,13 @@ def find_duplicates(folder: Path) -> DuplicateReport:
     if is_link(root) or not stat.S_ISDIR(info.st_mode) or (info.st_dev, info.st_ino) != root_id:
         raise FilePilotError("The folder changed during duplicate scanning.")
     groups = [
-        DuplicateGroup(digest, size, tuple(files))
+        DuplicateGroup(digest, size, tuple(sorted(files, key=_name_order)))
         for (size, digest), files in matches.items()
         if len(files) > 1
     ]
-    groups.sort(key=lambda group: (group.files[0].casefold(), group.files[0]))
-    errors.sort(key=lambda entry: (entry.source.casefold(), entry.source))
+    groups.sort(key=lambda group: _name_order(group.files[0]))
+    skipped.sort(key=lambda entry: _name_order(entry.source))
+    errors.sort(key=lambda entry: _name_order(entry.source))
     return DuplicateReport(
         root,
         tuple(groups),

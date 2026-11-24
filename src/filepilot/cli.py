@@ -18,7 +18,7 @@ from .watcher import WatchOptions, watch_folder
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="FilePilot: preview, organize, find duplicates, and undo file moves.",
-        epilog="Only immediate files are scanned. Moves require --apply.",
+        epilog="Scans inspect immediate files by default. Moves require --apply.",
     )
     parser.add_argument("--version", action="version", version=f"FilePilot {__version__}")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -35,7 +35,7 @@ def _parser() -> argparse.ArgumentParser:
                 "history": "List saved runs for a folder.",
             }[name],
         )
-        command.add_argument("folder", type=Path, help="Folder to inspect (not recursive).")
+        command.add_argument("folder", type=Path, help="Folder to inspect.")
         command.add_argument(
             "--json",
             action="store_true",
@@ -45,6 +45,8 @@ def _parser() -> argparse.ArgumentParser:
         )
         if name in ("scan", "organize", "watch", "plan"):
             command.add_argument("--config", type=Path, help="Use custom TOML rules.")
+        if name == "duplicates":
+            command.add_argument("--recursive", action="store_true", help="Include subfolders.")
         if name == "plan":
             command.add_argument(
                 "--output", type=Path, required=True, help="Create a new JSON plan."
@@ -139,7 +141,7 @@ def _print_duplicates(report: DuplicateReport, *, as_json: bool) -> int:
         for entry in report.skipped:
             print(f"  SKIP {entry.source!r}: {entry.reason}")
         if report.errors:
-            print(f"Scan incomplete: {len(report.errors)} file error(s); see stderr.")
+            print(f"Scan incomplete: {len(report.errors)} error(s); see stderr.")
         for entry in report.errors:
             print(f"  ERROR {entry.source!r}: {entry.message}", file=sys.stderr)
         print("Read-only report. No files moved or deleted.")
@@ -178,7 +180,8 @@ def _dispatch(args: argparse.Namespace) -> int:
             stream.write(EXAMPLE_CONFIG)
         print(f"Created {args.output}. Use --config {args.output} with scan or organize.")
     elif args.command == "duplicates":
-        return _print_duplicates(find_duplicates(args.folder), as_json=args.json)
+        report = find_duplicates(args.folder, recursive=args.recursive)
+        return _print_duplicates(report, as_json=args.json)
     elif args.command == "plan":
         rules = load_rules(args.config) if args.config else DEFAULT_RULES
         exclude = (args.output, args.config) if args.config else (args.output,)

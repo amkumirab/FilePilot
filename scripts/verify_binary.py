@@ -111,6 +111,16 @@ def exercise(executable: Path, work: Path, environment: dict[str, str], version:
     require(
         before == after and not (duplicates / ".filepilot").exists(), "Duplicate scan wrote data"
     )
+    nested = duplicates / "nested"
+    nested.mkdir()
+    (nested / "copy.txt").write_bytes(b"same")
+    recursive = json.loads(run("duplicates", duplicates, "--recursive", "--json"))
+    require(not recursive["errors"], "Recursive scan reported errors")
+    groups = [group["files"] for group in recursive["groups"]]
+    require(
+        ["a.txt", "nested/copy.txt", "نسخه.bin"] in groups,
+        "Recursive scan did not group files across folders",
+    )
     for script in ("demo.py", "watch_demo.py"):
         result = subprocess.run(
             [sys.executable, str(ROOT / "scripts" / script), "--executable", str(executable)],

@@ -76,10 +76,27 @@ class DuplicatesCliTests(unittest.TestCase):
 
     def test_moving_and_rule_flags_are_not_accepted(self):
         self.files()
-        for option in ("--apply", "--delete", "--recursive", "--config"):
+        for option in ("--apply", "--delete", "--config"):
             self.command("duplicates", self.root, option, expected=2)
         self.assertFalse((self.root / ".filepilot").exists())
         self.assertTrue((self.root / "invoice.pdf").exists())
+
+    def test_recursive_scan_reports_relative_paths_and_leaves_files_in_place(self):
+        for folder in ("backup", "عکس‌ها/2025", ".hidden", ".filepilot"):
+            directory = self.root / folder
+            directory.mkdir(parents=True)
+            (directory / "same.jpg").write_bytes(b"duplicate")
+        shallow = json.loads(self.command("duplicates", self.root, "--json").stdout)
+        self.assertEqual(shallow["summary"]["scanned_files"], 0)
+        report = json.loads(self.command("duplicates", self.root, "--recursive", "--json").stdout)
+        self.assertEqual(report["groups"][0]["files"], ["backup/same.jpg", "عکس‌ها/2025/same.jpg"])
+        self.assertEqual(report["summary"]["scanned_files"], 2)
+        self.assertEqual(report["errors"], [])
+        self.assertEqual(
+            [entry["source"] for entry in report["skipped"]], [".filepilot", ".hidden"]
+        )
+        self.assertEqual((self.root / "backup/same.jpg").read_bytes(), b"duplicate")
+        self.assertEqual((self.root / "عکس‌ها/2025/same.jpg").read_bytes(), b"duplicate")
 
     def test_filtered_entries_are_visible_in_json(self):
         self.files()

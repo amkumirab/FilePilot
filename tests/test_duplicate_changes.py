@@ -176,11 +176,28 @@ class DuplicateChangeTests(unittest.TestCase):
         self.assertEqual(report.groups[0].files, ("a", "b"))
         self.assertEqual(report.scanned_files, 2)
 
+    def test_unreadable_subfolder_keeps_results_from_other_paths(self):
+        denied = self.root / "sub" / "denied"
+        denied.mkdir(parents=True)
+        original_iterdir = Path.iterdir
+
+        def iterdir(path):
+            if path == denied:
+                raise PermissionError("test: cannot list subfolder")
+            return original_iterdir(path)
+
+        with patch.object(Path, "iterdir", iterdir):
+            report = find_duplicates(self.root, recursive=True)
+        self.assertEqual(report.groups[0].files, ("a", "b"))
+        self.assertEqual([error.source for error in report.errors], ["sub/denied"])
+
     def test_junction_or_symlink_is_skipped_without_following_it(self):
         outside = self.work / "outside"
         outside.mkdir()
         (outside / "copy").write_bytes(b"same")
-        link = self.root / "linked"
+        nested = self.root / "nested"
+        nested.mkdir()
+        link = nested / "linked"
         if os.name == "nt":
             result = subprocess.run(
                 ["cmd", "/c", "mklink", "/J", str(link), str(outside)],
@@ -190,9 +207,10 @@ class DuplicateChangeTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
         else:
             link.symlink_to(outside, target_is_directory=True)
-        report = find_duplicates(self.root)
+        report = find_duplicates(self.root, recursive=True)
         self.assertEqual(report.groups[0].files, ("a", "b"))
         self.assertEqual(report.skipped[0].reason, "link or junction")
+        self.assertEqual(report.skipped[0].source, "nested/linked")
         self.assertEqual(report.scanned_files, 2)
 
     def test_nonregular_fifo_is_not_opened_on_posix(self):
