@@ -1,8 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 - 2026-11-26
 
 ### Added
+- Preview and quarantine explicitly selected duplicate copies with `--keep` and
+  repeatable `--move` options. Apply verifies content and journals the original
+  paths so that `undo` can restore copies to their original subfolders.
 - Use `duplicates --recursive` to find matching files across subfolders.
   Reports use paths relative to the scan root and retain results when a subfolder
   cannot be read.

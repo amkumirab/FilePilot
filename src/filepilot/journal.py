@@ -8,7 +8,7 @@ import uuid
 from contextlib import contextmanager
 from pathlib import Path
 
-from .paths import FilePilotError, root_directory, safe_path
+from .paths import FilePilotError, quarantine_target, root_directory, safe_path, validate_relative
 
 RUN_ID = re.compile(r"\d{8}T\d{12}Z-[0-9a-f]{8}\Z")
 ENTRY_STATES = {"not_started", "pending", "moved", "failed", "undo_pending", "undone"}
@@ -90,6 +90,9 @@ def _validate(root: Path, run: dict, run_id: str) -> None:
         or not isinstance(run.get("created"), str)
     ):
         raise FilePilotError(f"Invalid or relocated history journal: {run_id}")
+    kind = run.get("kind", "organize")
+    if kind not in ("organize", "quarantine"):
+        raise FilePilotError(f"Invalid history operation in {run_id}")
     sources, targets = set(), set()
     for entry in run["entries"]:
         if (
@@ -101,14 +104,14 @@ def _validate(root: Path, run: dict, run_id: str) -> None:
         source, target, digest = entry.get("source"), entry.get("target"), entry.get("sha256")
         if not isinstance(source, str) or not isinstance(target, str):
             raise FilePilotError(f"Invalid history paths in {run_id}")
-        safe_path(root, source)
-        safe_path(root, target)
-        if (
-            "/" in source
-            or "/" not in target
-            or source.casefold() in sources
-            or target.casefold() in targets
-        ):
+        if kind == "quarantine":
+            validate_relative(target)
+            valid_paths = target == quarantine_target(source)
+        else:
+            safe_path(root, source)
+            safe_path(root, target)
+            valid_paths = "/" not in source and "/" in target
+        if not valid_paths or source.casefold() in sources or target.casefold() in targets:
             raise FilePilotError(f"Invalid or duplicate history paths in {run_id}")
         sources.add(source.casefold())
         targets.add(target.casefold())

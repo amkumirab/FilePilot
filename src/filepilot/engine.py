@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from .journal import history, load_run, locked, save_run
-from .paths import FilePilotError, root_directory, safe_path
+from .paths import FilePilotError, quarantine_target, root_directory, safe_path
 from .planner import Move, Plan
 
 __all__ = ["execute", "history", "load_run", "preview_undo", "undo", "validate_plan"]
@@ -42,6 +42,14 @@ def _unchanged(source: Path, move: Move) -> None:
         raise FilePilotError(f"File changed since preview: {move.source}")
 
 
+def source_digest(root: Path, move: Move) -> str:
+    source = safe_path(root, move.source)
+    _unchanged(source, move)
+    digest = _digest(source)
+    _unchanged(source, move)
+    return digest
+
+
 def _available_target(root: Path, relative: str) -> None:
     safe_path(root, relative)
     parent = root
@@ -67,10 +75,7 @@ def validate_plan(plan: Plan, hashes: tuple[str, ...] | None = None) -> tuple[st
         raise FilePilotError("The plan has an invalid number of file hashes.")
     observed = []
     for index, move in enumerate(plan.moves):
-        source = safe_path(root, move.source)
-        _unchanged(source, move)
-        digest = _digest(source)
-        _unchanged(source, move)
+        digest = source_digest(root, move)
         if hashes is not None and digest != hashes[index]:
             raise FilePilotError(f"File content changed since planning: {move.source}")
         _available_target(root, move.target)
@@ -78,7 +83,9 @@ def validate_plan(plan: Plan, hashes: tuple[str, ...] | None = None) -> tuple[st
     return tuple(observed)
 
 
-def execute(plan: Plan, *, hashes: tuple[str, ...] | None = None) -> dict:
+def execute(
+    plan: Plan, *, hashes: tuple[str, ...] | None = None, keeper: Move | None = None
+) -> dict:
     if not plan.moves:
         raise FilePilotError("Nothing to organize.")
     root = root_directory(plan.root)
@@ -100,7 +107,22 @@ def execute(plan: Plan, *, hashes: tuple[str, ...] | None = None) -> dict:
             for move in plan.moves
         ],
     }
+    if keeper is not None:
+        quarantine_target(keeper.source)
+        if (
+            not hashes
+            or len(set(hashes)) != 1
+            or any(
+                move.target != quarantine_target(move.source)
+                or move.source.casefold() == keeper.source.casefold()
+                for move in plan.moves
+            )
+        ):
+            raise FilePilotError("Invalid quarantine plan.")
+        run["kind"] = "quarantine"
     with locked(root):
+        if keeper is not None and source_digest(root, keeper) != hashes[0]:
+            raise FilePilotError(f"Kept file changed since planning: {keeper.source}")
         if hashes is not None:
             validate_plan(plan, hashes)
         save_run(root, run)
@@ -122,8 +144,10 @@ def execute(plan: Plan, *, hashes: tuple[str, ...] | None = None) -> dict:
             # Persistence errors must stop the run, not be treated as move errors.
             save_run(root, run)
             try:
+                if keeper is not None:
+                    _unchanged(safe_path(root, keeper.source), keeper)
                 _move_no_replace(source, target)
-            except OSError as exc:
+            except (OSError, FilePilotError) as exc:
                 entry.update(status="failed", error=str(exc))
             else:
                 entry["status"] = "moved"
@@ -148,6 +172,8 @@ def _restorable(root: Path, entry: dict) -> tuple[Path, Path] | None:
         raise FilePilotError(f"Ambiguous failed move; inspect both paths: {entry['source']}")
     if source.exists():
         raise FilePilotError(f"Original path is occupied: {entry['source']}")
+    if not source.parent.is_dir():
+        raise FilePilotError(f"Original parent folder is missing: {entry['source']}")
     if _digest(target) != entry["sha256"]:
         raise FilePilotError(f"Organized file changed; leaving it in place: {entry['target']}")
     return target, source

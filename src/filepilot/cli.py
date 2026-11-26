@@ -11,6 +11,7 @@ from .duplicates import DuplicateReport, find_duplicates
 from .engine import execute, history, load_run, preview_undo, undo, validate_plan
 from .paths import FilePilotError
 from .planner import Plan, build_plan
+from .quarantine import plan_quarantine
 from .saved_plans import load_plan, save_plan
 from .watcher import WatchOptions, watch_folder
 
@@ -70,6 +71,16 @@ def _parser() -> argparse.ArgumentParser:
                 type=int,
                 help="Stop after this many polls; otherwise run until Ctrl+C.",
             )
+    quarantine = commands.add_parser("quarantine", help="Move selected duplicates into quarantine.")
+    quarantine.add_argument("folder", type=Path, help="Root folder containing the files.")
+    quarantine.add_argument("--keep", required=True, help="Relative path of the file to keep.")
+    quarantine.add_argument(
+        "--move", action="append", required=True, help="Relative copy path. Repeat for each copy."
+    )
+    quarantine.add_argument(
+        "--apply", action="store_true", help="Actually move the selected copies."
+    )
+    quarantine.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
     apply_saved = commands.add_parser(
         "apply", help="Validate a saved plan; move only with --apply."
     )
@@ -179,6 +190,17 @@ def _dispatch(args: argparse.Namespace) -> int:
         with args.output.open("x", encoding="utf-8", newline="\n") as stream:
             stream.write(EXAMPLE_CONFIG)
         print(f"Created {args.output}. Use --config {args.output} with scan or organize.")
+    elif args.command == "quarantine":
+        plan, keeper, hashes = plan_quarantine(args.folder, args.keep, args.move)
+        if args.apply:
+            return _print_run(execute(plan, hashes=hashes, keeper=keeper), as_json=args.json)
+        if args.json:
+            _json({**plan.to_dict(), "keep": keeper.source, "preview": True})
+        else:
+            print(f"Keep: {keeper.source!r}")
+            for move in plan.moves:
+                print(f"  {move.source!r} -> {move.target!r}")
+            print("Preview only. Repeat with --apply to move these copies.")
     elif args.command == "duplicates":
         report = find_duplicates(args.folder, recursive=args.recursive)
         return _print_duplicates(report, as_json=args.json)

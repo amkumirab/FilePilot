@@ -143,6 +143,26 @@ Unreadable subfolders and unreadable or detectably changed files are reported wi
 code `1`; other results remain available. `--json` includes `groups`, `summary`,
 `skipped`, and `errors`. See [report fields and limits](docs/duplicates.md).
 
+## Quarantine duplicate copies
+
+Run a duplicate report to identify the file to keep and the copies to move.
+Use paths relative to the folder being scanned, with forward slashes.
+
+```powershell
+filepilot quarantine ./Photos --keep 2025/photo.jpg --move Backup/photo.jpg
+filepilot quarantine ./Photos --keep 2025/photo.jpg --move Backup/photo.jpg --apply
+filepilot undo ./Photos
+filepilot undo ./Photos --apply
+```
+
+Repeat `--move` to select more copies in the same group. The default is a read-only
+preview. Apply checks content again and moves only the selected copies to
+`.filepilot-quarantine/`, preserving their relative paths. It rejects occupied
+destinations, hard-link aliases, and linked paths. Use `history` to find a
+specific run, then pass its ID to `undo --run`. Restore an original parent folder
+before retrying undo if you removed it after quarantine. Use FilePilot 0.5.0 or
+newer to read and undo quarantine history.
+
 ## Watch a folder
 
 ```bash

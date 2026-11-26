@@ -121,6 +121,14 @@ def exercise(executable: Path, work: Path, environment: dict[str, str], version:
         ["a.txt", "nested/copy.txt", "نسخه.bin"] in groups,
         "Recursive scan did not group files across folders",
     )
+    selection = ("quarantine", duplicates, "--keep", "a.txt", "--move", "nested/copy.txt")
+    require(json.loads(run(*selection, "--json"))["preview"], "Quarantine preview failed")
+    require((nested / "copy.txt").is_file(), "Preview moved the copy")
+    quarantined = json.loads(run(*selection, "--apply", "--json"))
+    require(quarantined["status"] == "completed", "Quarantine failed")
+    require(not (nested / "copy.txt").exists(), "Quarantine did not move the copy")
+    run("undo", duplicates, "--run", quarantined["id"], "--apply")
+    require((nested / "copy.txt").read_bytes() == b"same", "Quarantine undo failed")
     for script in ("demo.py", "watch_demo.py"):
         result = subprocess.run(
             [sys.executable, str(ROOT / "scripts" / script), "--executable", str(executable)],

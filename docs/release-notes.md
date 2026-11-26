@@ -1,21 +1,18 @@
-# FilePilot 0.4.0
+# FilePilot 0.5.0
 
-Report duplicate file content without moving or deleting files:
+Quarantine duplicate copies and restore them to their original folders with undo.
+Choose one file to keep and list the copies to move. The command previews by
+default and checks content before applying the moves.
 
 ```powershell
-.\FilePilot.exe duplicates "$env:USERPROFILE\Downloads"
-.\FilePilot.exe duplicates "$env:USERPROFILE\Downloads" --json
+.\FilePilot.exe quarantine .\Photos --keep 2025/photo.jpg --move Backup/photo.jpg
+.\FilePilot.exe quarantine .\Photos --keep 2025/photo.jpg --move Backup/photo.jpg --apply
+.\FilePilot.exe undo .\Photos --apply
 ```
 
-The scanner groups immediate regular files by size before calculating SHA-256
-in bounded chunks. It reports matching filenames, extra copies, and logical
-duplicate bytes. Hard-link aliases count once when identity is available.
-Directories, hidden/internal files, incomplete downloads, and links are skipped.
+Duplicate reports can include matches across subfolders with `--recursive`.
 
-Unreadable or detectably changing files produce a partial report with exit 1;
-JSON includes their errors. Use a quiet folder: a report is a point-in-time
-observation, and logical bytes are not a disk-space recovery guarantee.
-Existing organization, watch, saved-plan, history, and undo commands remain available.
+Use FilePilot 0.5.0 or newer to read and undo quarantine history.
 
 The Windows x64 ZIP contains a standalone `FilePilot.exe`. Python is included;
 no separate Python installation is required.

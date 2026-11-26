@@ -3,6 +3,15 @@
 import stat
 from pathlib import Path
 
+QUARANTINE_DIRECTORY = ".filepilot-quarantine"
+
+
+def quarantine_target(source: str) -> str:
+    validate_relative(source)
+    if source.split("/")[0].casefold() == QUARANTINE_DIRECTORY:
+        raise FilePilotError("Select a file outside the quarantine directory.")
+    return f"{QUARANTINE_DIRECTORY}/{source}"
+
 
 class FilePilotError(Exception):
     """A readable configuration or operation error."""
